@@ -1,0 +1,287 @@
+openapi: 3.0.0
+info:
+  title: Community Connect API
+  description: API documentation for Community Connect
+  version: 1.0.0
+servers:
+  - url: http://localhost:5050  # ✅ Ensure this is correct
+
+paths:
+  # ✅ Authentication Endpoints
+  /auth/register:
+    post:
+      summary: Register a new user
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "201":
+          description: User registered successfully
+
+  /auth/login:
+    post:
+      summary: Login a user
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "200":
+          description: User logged in successfully
+
+  # ✅ Events API
+  /events:
+    get:
+      summary: Get all events
+      tags:
+        - Events
+      responses:
+        "200":
+          description: List of events
+
+    post:
+      summary: Create a new event
+      tags:
+        - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                date:
+                  type: string
+                  format: date-time
+                location:
+                  type: string
+      responses:
+        "201":
+          description: Event created successfully
+
+  /events/{id}:
+    get:
+      summary: Get a single event
+      tags:
+        - Events
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Event details
+
+    put:
+      summary: Update an event
+      tags:
+        - Events
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                date:
+                  type: string
+                  format: date-time
+                location:
+                  type: string
+      responses:
+        "200":
+          description: Event updated successfully
+
+    delete:
+      summary: Delete an event
+      tags:
+        - Events
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Event deleted successfully
+
+  # ✅ Resources API
+  /resources:
+    get:
+      summary: Get all resources
+      tags:
+        - Resources
+      responses:
+        "200":
+          description: List of resources
+
+    post:
+      summary: Create a new resource
+      tags:
+        - Resources
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                ownerId:
+                  type: string
+      responses:
+        "201":
+          description: Resource created successfully
+
+  /resources/{id}:
+    get:
+      summary: Get a single resource
+      tags:
+        - Resources
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Resource details
+
+    put:
+      summary: Update a resource
+      tags:
+        - Resources
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                ownerId:
+                  type: string
+      responses:
+        "200":
+          description: Resource updated successfully
+
+    delete:
+      summary: Delete a resource
+      tags:
+        - Resources
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Resource deleted successfully
+
+  # ✅ Help Requests API
+  /helprequests:
+    get:
+      summary: Get all help requests
+      tags:
+        - Help Requests
+      responses:
+        "200":
+          description: List of help requests
+
+    post:
+      summary: Create a new help request
+      tags:
+        - Help Requests
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                description:
+                  type: string
+                category:
+                  type: string
+      responses:
+        "201":
+          description: Help request created successfully
+
+  # ✅ Skill Sharing API
+  /skillsharings:
+    get:
+      summary: Get all skill-sharing listings
+      tags:
+        - Skill Sharing
+      responses:
+        "200":
+          description: List of skill-sharing listings
+
+    post:
+      summary: Create a new skill listing
+      tags:
+        - Skill Sharing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                skillName:
+                  type: string
+                description:
+                  type: string
+                userId:
+                  type: string
+      responses:
+        "201":
+          description: Skill listing created successfully
