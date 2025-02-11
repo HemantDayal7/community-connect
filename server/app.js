@@ -3,8 +3,19 @@ const swaggerSetup = require("./config/swagger");
 const connectDB = require("./config/db");
 require("dotenv").config();
 
+// Security Middleware
+const helmet = require("helmet");
+const cors = require("cors");
+const rateLimit = require("express-rate-limit");
+
 const app = express();
 app.use(express.json());
+
+// Apply security middleware
+app.use(helmet());
+app.use(cors());
+const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 });
+app.use(limiter);
 
 // ✅ Debug log - Confirm API server starts
 console.log("🚀 Server is starting...");
@@ -42,6 +53,14 @@ app.use("/messages", messagesRoutes); // ✅ Register Messages Route
 
 // ✅ Setup Swagger Documentation
 swaggerSetup(app);
+
+// Centralized Error Handling Middleware
+const errorHandler = require("./middleware/errorHandler");
+app.use((req, res, next) => {
+  res.status(404);
+  next(new Error("Not Found"));
+});
+app.use(errorHandler);
 
 // ✅ Define port from .env or default to 5050
 const PORT = process.env.PORT || 5050;

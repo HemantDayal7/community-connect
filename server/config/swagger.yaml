@@ -4,7 +4,14 @@ info:
   description: API documentation for Community Connect
   version: 1.0.0
 servers:
-  - url: http://localhost:5050  # ✅ Ensure this is correct
+  - url: http://localhost:5050
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
 
 paths:
   # ✅ Authentication Endpoints
@@ -19,6 +26,10 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - name
+                - email
+                - password
               properties:
                 name:
                   type: string
@@ -29,6 +40,8 @@ paths:
       responses:
         "201":
           description: User registered successfully
+        "400":
+          description: Bad Request (User already exists)
 
   /auth/login:
     post:
@@ -41,6 +54,9 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - email
+                - password
               properties:
                 email:
                   type: string
@@ -49,6 +65,21 @@ paths:
       responses:
         "200":
           description: User logged in successfully
+        "400":
+          description: Invalid Credentials
+
+  /auth/me:
+    get:
+      summary: Get logged-in user details
+      tags:
+        - Authentication
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: User details returned successfully
+        "401":
+          description: Unauthorized (Invalid or missing token)
 
   # ✅ Events API
   /events:
@@ -59,17 +90,22 @@ paths:
       responses:
         "200":
           description: List of events
-
     post:
       summary: Create a new event
       tags:
         - Events
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+              required:
+                - title
+                - date
+                - location
               properties:
                 title:
                   type: string
@@ -96,11 +132,12 @@ paths:
       responses:
         "200":
           description: Event details
-
     put:
       summary: Update an event
       tags:
         - Events
+      security:
+        - BearerAuth: []
       parameters:
         - name: id
           in: path
@@ -124,11 +161,12 @@ paths:
       responses:
         "200":
           description: Event updated successfully
-
     delete:
       summary: Delete an event
       tags:
         - Events
+      security:
+        - BearerAuth: []
       parameters:
         - name: id
           in: path
@@ -148,7 +186,6 @@ paths:
       responses:
         "200":
           description: List of resources
-
     post:
       summary: Create a new resource
       tags:
@@ -159,6 +196,10 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - title
+                - description
+                - ownerId
               properties:
                 title:
                   type: string
@@ -184,7 +225,6 @@ paths:
       responses:
         "200":
           description: Resource details
-
     put:
       summary: Update a resource
       tags:
@@ -206,12 +246,9 @@ paths:
                   type: string
                 description:
                   type: string
-                ownerId:
-                  type: string
       responses:
         "200":
           description: Resource updated successfully
-
     delete:
       summary: Delete a resource
       tags:
@@ -226,7 +263,7 @@ paths:
         "200":
           description: Resource deleted successfully
 
-  # ✅ Help Requests API
+  # ✅ Help Requests API (UPDATED)
   /helprequests:
     get:
       summary: Get all help requests
@@ -235,11 +272,39 @@ paths:
       responses:
         "200":
           description: List of help requests
-
     post:
       summary: Create a new help request
       tags:
         - Help Requests
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - description
+                - category
+              properties:
+                description:
+                  type: string
+                category:
+                  type: string
+      responses:
+        "201":
+          description: Help request created successfully
+
+  /helprequests/{id}:
+    put:
+      summary: Update a help request
+      tags:
+        - Help Requests
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
       requestBody:
         required: true
         content:
@@ -252,10 +317,24 @@ paths:
                 category:
                   type: string
       responses:
-        "201":
-          description: Help request created successfully
+        "200":
+          description: Help request updated successfully
 
-  # ✅ Skill Sharing API
+    delete:
+      summary: Delete a help request
+      tags:
+        - Help Requests
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Help request deleted successfully
+
+  # ✅ Skill Sharing API (UPDATED)
   /skillsharings:
     get:
       summary: Get all skill-sharing listings
@@ -264,11 +343,42 @@ paths:
       responses:
         "200":
           description: List of skill-sharing listings
-
     post:
       summary: Create a new skill listing
       tags:
         - Skill Sharing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - skillName
+                - description
+                - userId
+              properties:
+                skillName:
+                  type: string
+                description:
+                  type: string
+                userId:
+                  type: string
+      responses:
+        "201":
+          description: Skill listing created successfully
+
+  /skillsharings/{id}:
+    put:
+      summary: Update a skill listing
+      tags:
+        - Skill Sharing
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
       requestBody:
         required: true
         content:
@@ -280,8 +390,20 @@ paths:
                   type: string
                 description:
                   type: string
-                userId:
-                  type: string
       responses:
-        "201":
-          description: Skill listing created successfully
+        "200":
+          description: Skill listing updated successfully
+
+    delete:
+      summary: Delete a skill listing
+      tags:
+        - Skill Sharing
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Skill listing deleted successfully
