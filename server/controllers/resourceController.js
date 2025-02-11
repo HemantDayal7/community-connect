@@ -1,120 +1,98 @@
 const Resource = require("../models/Resource");
 
-// List of allowed availability values
-const validAvailability = ["available", "not available", "unavailable"];
-
-// @desc     Create a new resource
-const createResource = async (req, res) => {
+// ✅ Create a new resource
+exports.createResource = async (req, res) => {
+  const { title, description, ownerId, availability, location } = req.body;
   try {
-    const { title, description, availability, location } = req.body;
-
-    // Validate input
-    if (!title || !description || !availability || !location) {
-      return res.status(400).json({ msg: "All fields (title, description, availability, location) are required." });
-    }
-
-    if (!validAvailability.includes(availability)) {
-      return res.status(400).json({ msg: `Invalid availability status. Choose from: ${validAvailability.join(", ")}` });
-    }
-
-    const newResource = new Resource({
-      title,
-      description,
-      availability,
-      location,
-      ownerId: req.user.id,
+    const resource = new Resource({ title, description, ownerId, availability, location });
+    await resource.save();
+    res.status(201).json({
+      message: "Resource created successfully",
+      resource,
     });
-
-    await newResource.save();
-    res.status(201).json(newResource);
   } catch (error) {
-    console.error("Error creating resource:", error);
-    res.status(500).json({ msg: "Server Error" });
+    res.status(500).json({ error: error.message });
   }
 };
 
-// @desc     Get all resources
-const getAllResources = async (req, res) => {
+// ✅ Get all resources
+exports.getAllResources = async (req, res) => {
   try {
-    const resources = await Resource.find({ isDeleted: false })
-      .populate("ownerId", "name email")
-      .lean();
+    const resources = await Resource.find({ isDeleted: false });
     res.json(resources);
   } catch (error) {
-    console.error("Error fetching resources:", error);
-    res.status(500).json({ msg: "Server Error" });
+    res.status(500).json({ error: error.message });
   }
 };
 
-// @desc     Get a single resource by ID
-const getResourceById = async (req, res) => {
+// ✅ Get a single resource by ID
+exports.getResourceById = async (req, res) => {
   try {
-    const resource = await Resource.findById(req.params.id)
-      .populate("ownerId", "name email")
-      .lean();
-    
+    const resource = await Resource.findById(req.params.id);
     if (!resource || resource.isDeleted) {
-      return res.status(404).json({ msg: "Resource not found" });
+      return res.status(404).json({ message: "Resource not found" });
     }
-
     res.json(resource);
   } catch (error) {
-    console.error("Error fetching resource:", error);
-    res.status(500).json({ msg: "Server Error" });
+    res.status(500).json({ error: error.message });
   }
 };
 
-// @desc     Update a resource
-const updateResource = async (req, res) => {
+// ✅ Update a resource
+exports.updateResource = async (req, res) => {
   try {
-    let resource = await Resource.findById(req.params.id);
+    const resource = await Resource.findById(req.params.id);
     if (!resource || resource.isDeleted) {
-      return res.status(404).json({ msg: "Resource not found" });
+      return res.status(404).json({ message: "Resource not found" });
     }
-
-    if (resource.ownerId.toString() !== req.user.id) {
-      return res.status(403).json({ msg: "Unauthorized" });
-    }
-
-    // Validate availability if provided
-    if (req.body.availability && !validAvailability.includes(req.body.availability)) {
-      return res.status(400).json({ msg: `Invalid availability status. Choose from: ${validAvailability.join(", ")}` });
-    }
-
-    resource = await Resource.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-    res.json(resource);
+    Object.assign(resource, req.body);
+    await resource.save();
+    res.json({
+      message: "Resource updated successfully",
+      resource,
+    });
   } catch (error) {
-    console.error("Error updating resource:", error);
-    res.status(500).json({ msg: "Server Error" });
+    res.status(500).json({ error: error.message });
   }
 };
 
-// @desc     Delete a resource (Soft delete)
-const deleteResource = async (req, res) => {
+// ✅ Soft delete a resource
+exports.deleteResource = async (req, res) => {
   try {
-    let resource = await Resource.findById(req.params.id);
-    if (!resource || resource.isDeleted) {
-      return res.status(404).json({ msg: "Resource not found" });
+    const resource = await Resource.findById(req.params.id);
+    if (!resource) {
+      return res.status(404).json({ message: "Resource not found" });
     }
-
-    if (resource.ownerId.toString() !== req.user.id) {
-      return res.status(403).json({ msg: "Unauthorized" });
+    if (resource.isDeleted) {
+      return res.status(400).json({ message: "Resource already deleted" });
     }
-
     resource.isDeleted = true;
     await resource.save();
-    res.json({ msg: "Resource deleted successfully" });
+    res.json({ message: "Resource deleted successfully" });
   } catch (error) {
-    console.error("Error deleting resource:", error);
-    res.status(500).json({ msg: "Server Error" });
+    res.status(500).json({ error: error.message });
   }
 };
 
-// ✅ **Ensure proper module exports**
-module.exports = {
-  createResource,
-  getAllResources,
-  getResourceById,
-  updateResource,
-  deleteResource,
+// ✅ Borrow a resource
+exports.borrowResource = async (req, res) => {
+  const { resourceId, userId } = req.body;
+  try {
+    const resource = await Resource.findById(resourceId);
+    if (!resource || resource.isDeleted) {
+      return res.status(404).json({ message: "Resource not found" });
+    }
+    if (resource.availability === "borrowed") {
+      return res.status(400).json({ message: "Resource is already borrowed" });
+    }
+    resource.borrowerId = userId;
+    resource.availability = "borrowed";
+    await resource.save();
+    res.json({
+      message: "Resource borrowed successfully",
+      resource,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 };

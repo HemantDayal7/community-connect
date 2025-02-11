@@ -1,91 +1,65 @@
 const SkillSharing = require("../models/SkillSharing");
 
-// ✅ Create a new skill-sharing entry
-exports.createSkillSharing = async (req, res) => {
-  try {
-    const { skillName, description, availability, location } = req.body;
-
-    if (!skillName || !description || !location) {
-      return res.status(400).json({ msg: "All fields are required" });
-    }
-
-    const skillSharing = new SkillSharing({
-      userId: req.user._id,
-      skillName,
-      description,
-      availability,
-      location,
-    });
-
-    await skillSharing.save();
-    res.status(201).json(skillSharing);
-  } catch (error) {
-    console.error("Error creating skill sharing:", error);
-    res.status(500).json({ msg: "Server error" });
-  }
-};
-
-// ✅ Get all skill-sharing entries
+// ✅ Get all skill-sharing listings
 exports.getAllSkillSharings = async (req, res) => {
   try {
-    const skillSharings = await SkillSharing.find({ isDeleted: false }).populate("userId", "name email");
-    res.status(200).json(skillSharings);
+    const skills = await SkillSharing.find();
+    res.json(skills);
   } catch (error) {
-    console.error("Error fetching skill sharings:", error);
-    res.status(500).json({ msg: "Server error" });
+    res.status(500).json({ error: error.message });
   }
 };
 
-// ✅ Get a specific skill-sharing entry by ID
+// ✅ Create a new skill listing
+exports.createSkillSharing = async (req, res) => {
+  const { skillName, description, userId } = req.body;
+  try {
+    const skill = new SkillSharing({ skillName, description, userId });
+    await skill.save();
+    res.status(201).json({ message: "Skill listing created successfully", skill });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// ✅ Get a single skill listing
 exports.getSkillSharingById = async (req, res) => {
   try {
-    const skillSharing = await SkillSharing.findOne({ _id: req.params.id, isDeleted: false }).populate("userId", "name email");
-
-    if (!skillSharing) {
-      return res.status(404).json({ msg: "Skill sharing entry not found" });
+    const skill = await SkillSharing.findById(req.params.id);
+    if (!skill) {
+      return res.status(404).json({ message: "Skill listing not found" });
     }
-
-    res.status(200).json(skillSharing);
+    res.json(skill);
   } catch (error) {
-    console.error("Error fetching skill sharing:", error);
-    res.status(500).json({ msg: "Server error" });
+    res.status(500).json({ error: error.message });
   }
 };
 
-// ✅ Update a skill-sharing entry
+// ✅ Update a skill listing
 exports.updateSkillSharing = async (req, res) => {
   try {
-    const skillSharing = await SkillSharing.findOne({ _id: req.params.id, userId: req.user._id });
-
-    if (!skillSharing) {
-      return res.status(404).json({ msg: "Skill sharing entry not found" });
+    const skill = await SkillSharing.findById(req.params.id);
+    if (!skill) {
+      return res.status(404).json({ message: "Skill listing not found" });
     }
-
-    Object.assign(skillSharing, req.body);
-    await skillSharing.save();
-
-    res.status(200).json(skillSharing);
+    Object.assign(skill, req.body);
+    await skill.save();
+    res.json({ message: "Skill listing updated successfully", skill });
   } catch (error) {
-    console.error("Error updating skill sharing:", error);
-    res.status(500).json({ msg: "Server error" });
+    res.status(500).json({ error: error.message });
   }
 };
 
-// ✅ Soft delete a skill-sharing entry
+// ✅ Delete a skill listing
 exports.deleteSkillSharing = async (req, res) => {
   try {
-    const skillSharing = await SkillSharing.findOne({ _id: req.params.id, userId: req.user._id });
-
-    if (!skillSharing) {
-      return res.status(404).json({ msg: "Skill sharing entry not found" });
+    const skill = await SkillSharing.findById(req.params.id);
+    if (!skill) {
+      return res.status(404).json({ message: "Skill listing not found" });
     }
-
-    skillSharing.isDeleted = true;
-    await skillSharing.save();
-
-    res.status(200).json({ msg: "Skill sharing entry deleted" });
+    await skill.deleteOne();
+    res.json({ message: "Skill listing deleted successfully" });
   } catch (error) {
-    console.error("Error deleting skill sharing:", error);
-    res.status(500).json({ msg: "Server error" });
+    res.status(500).json({ error: error.message });
   }
 };

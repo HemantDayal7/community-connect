@@ -9,21 +9,13 @@ exports.createEvent = async (req, res) => {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { title, date, location } = req.body;
-
+  const { title, date, location, hostId } = req.body;
   try {
-    const newEvent = new Event({
-      title,
-      date,
-      location,
-      hostId: req.user.id
-    });
-
-    await newEvent.save();
-    res.status(201).json(newEvent);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send("Server Error");
+    const event = new Event({ title, date, location, hostId });
+    await event.save();
+    res.status(201).json({ message: "Event created successfully" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -31,11 +23,27 @@ exports.createEvent = async (req, res) => {
 // @desc     Get all events
 exports.getEvents = async (req, res) => {
   try {
-    const events = await Event.find().populate("hostId", "name email");
+    const events = await Event.find();
     res.json(events);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send("Server Error");
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// @route    POST /events/rsvp
+// @desc     RSVP to an event
+exports.rsvpEvent = async (req, res) => {
+  const { eventId, userId } = req.body;
+  try {
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+    event.attendees.push(userId);
+    await event.save();
+    res.json({ message: "RSVP successful" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
 

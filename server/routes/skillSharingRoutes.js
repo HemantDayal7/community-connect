@@ -1,28 +1,31 @@
 const express = require("express");
-const { protect } = require("../middleware/authMiddleware");
-const {
-  createSkillSharing,
-  getAllSkillSharings,
-  getSkillSharingById,
-  updateSkillSharing,
-  deleteSkillSharing
-} = require("../controllers/skillSharingController");
-
 const router = express.Router();
+const { protect } = require("../middleware/authMiddleware"); 
+const skillSharingController = require("../controllers/skillSharingController"); 
 
-// ✅ Create a new skill-sharing entry
-router.post("/", protect, createSkillSharing);
+// ✅ Make sure these functions exist in `skillSharingController.js`
+if (!skillSharingController.getAllSkillSharings) {
+  throw new Error("getAllSkillSharings function is missing in skillSharingController.js");
+}
 
-// ✅ Get all skill-sharing entries
-router.get("/", protect, getAllSkillSharings);
+// @route    GET /skillsharings
+// @desc     Get all skill-sharing listings
+router.get("/", skillSharingController.getAllSkillSharings);
 
-// ✅ Get a specific skill-sharing entry by ID
-router.get("/:id", protect, getSkillSharingById);
+// @route    POST /skillsharings
+// @desc     Create a new skill listing
+router.post("/", protect, skillSharingController.createSkillSharing);
 
-// ✅ Update a skill-sharing entry
-router.put("/:id", protect, updateSkillSharing);
+// @route    GET /skillsharings/:id
+// @desc     Get a single skill listing
+router.get("/:id", skillSharingController.getSkillSharingById);
 
-// ✅ Soft delete a skill-sharing entry
-router.delete("/:id", protect, deleteSkillSharing);
+// @route    PUT /skillsharings/:id
+// @desc     Update a skill listing
+router.put("/:id", protect, skillSharingController.updateSkillSharing);
+
+// @route    DELETE /skillsharings/:id
+// @desc     Delete a skill listing
+router.delete("/:id", protect, skillSharingController.deleteSkillSharing);
 
 module.exports = router;

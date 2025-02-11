@@ -1,7 +1,7 @@
 const express = require("express");
 const { check } = require("express-validator");
 const router = express.Router();
-const { protect } = require("../middleware/authMiddleware"); // ✅ Fixed Import
+const { protect } = require("../middleware/authMiddleware");
 const resourceController = require("../controllers/resourceController");
 
 // @route    POST /resources
@@ -33,5 +33,9 @@ router.put("/:id", protect, resourceController.updateResource);
 // @route    DELETE /resources/:id
 // @desc     Soft delete a resource
 router.delete("/:id", protect, resourceController.deleteResource);
+
+// @route    POST /resources/borrow
+// @desc     Borrow a resource
+router.post("/borrow", protect, resourceController.borrowResource);
 
 module.exports = router;

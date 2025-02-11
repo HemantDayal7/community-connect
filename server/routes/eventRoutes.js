@@ -1,5 +1,5 @@
 const express = require("express");
-const { check } = require("express-validator");
+const { check, validationResult } = require("express-validator");
 const router = express.Router();
 const eventController = require("../controllers/eventController");
 const { protect } = require("../middleware/authMiddleware"); // ✅ Correct Import
