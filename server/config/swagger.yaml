@@ -3,6 +3,7 @@ info:
   title: Community Connect API
   description: API documentation for Community Connect
   version: 1.0.0
+
 servers:
   - url: http://localhost:5050
 
@@ -18,82 +19,60 @@ paths:
   /auth/register:
     post:
       summary: Register a new user
-      tags:
-        - Authentication
+      tags: [Authentication]
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required:
-                - name
-                - email
-                - password
+              required: [name, email, password]
               properties:
-                name:
-                  type: string
-                email:
-                  type: string
-                password:
-                  type: string
+                name: { type: string }
+                email: { type: string }
+                password: { type: string }
       responses:
-        "201":
-          description: User registered successfully
-        "400":
-          description: Bad Request (User already exists)
+        "201": { description: User registered successfully }
+        "400": { description: Bad Request (User already exists) }
 
   /auth/login:
     post:
       summary: Login a user
-      tags:
-        - Authentication
+      tags: [Authentication]
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required:
-                - email
-                - password
+              required: [email, password]
               properties:
-                email:
-                  type: string
-                password:
-                  type: string
+                email: { type: string }
+                password: { type: string }
       responses:
-        "200":
-          description: User logged in successfully
-        "400":
-          description: Invalid Credentials
+        "200": { description: User logged in successfully }
+        "400": { description: Invalid Credentials }
 
   /auth/me:
     get:
       summary: Get logged-in user details
-      tags:
-        - Authentication
+      tags: [Authentication]
       security:
         - BearerAuth: []
       responses:
-        "200":
-          description: User details returned successfully
-        "401":
-          description: Unauthorized (Invalid or missing token)
+        "200": { description: User details returned successfully }
+        "401": { description: Unauthorized (Invalid or missing token) }
 
   # ✅ Events API
   /events:
     get:
       summary: Get all events
-      tags:
-        - Events
+      tags: [Events]
       responses:
-        "200":
-          description: List of events
+        "200": { description: List of events }
     post:
       summary: Create a new event
-      tags:
-        - Events
+      tags: [Events]
       security:
         - BearerAuth: []
       requestBody:
@@ -102,48 +81,35 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-                - title
-                - date
-                - location
+              required: [title, date, location]
               properties:
-                title:
-                  type: string
-                date:
-                  type: string
-                  format: date-time
-                location:
-                  type: string
+                title: { type: string }
+                date: { type: string, format: date-time }
+                location: { type: string }
       responses:
-        "201":
-          description: Event created successfully
+        "201": { description: Event created successfully }
 
   /events/{id}:
     get:
       summary: Get a single event
-      tags:
-        - Events
+      tags: [Events]
       parameters:
         - name: id
           in: path
           required: true
-          schema:
-            type: string
+          schema: { type: string }
       responses:
-        "200":
-          description: Event details
+        "200": { description: Event details }
     put:
       summary: Update an event
-      tags:
-        - Events
+      tags: [Events]
       security:
         - BearerAuth: []
       parameters:
         - name: id
           in: path
           required: true
-          schema:
-            type: string
+          schema: { type: string }
       requestBody:
         required: true
         content:
@@ -151,90 +117,73 @@ paths:
             schema:
               type: object
               properties:
-                title:
-                  type: string
-                date:
-                  type: string
-                  format: date-time
-                location:
-                  type: string
+                title: { type: string }
+                date: { type: string, format: date-time }
+                location: { type: string }
       responses:
-        "200":
-          description: Event updated successfully
+        "200": { description: Event updated successfully }
     delete:
       summary: Delete an event
-      tags:
-        - Events
+      tags: [Events]
       security:
         - BearerAuth: []
       parameters:
         - name: id
           in: path
           required: true
-          schema:
-            type: string
+          schema: { type: string }
       responses:
-        "200":
-          description: Event deleted successfully
+        "200": { description: Event deleted successfully }
 
   # ✅ Resources API
   /resources:
     get:
       summary: Get all resources
-      tags:
-        - Resources
+      tags: [Resources]
       responses:
-        "200":
-          description: List of resources
+        "200": { description: List of resources }
     post:
       summary: Create a new resource
-      tags:
-        - Resources
+      tags: [Resources]
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required:
-                - title
-                - description
-                - ownerId
+              required: [title, description, ownerId, availability, location]
               properties:
-                title:
-                  type: string
-                description:
-                  type: string
-                ownerId:
-                  type: string
+                title: { type: string }
+                description: { type: string }
+                ownerId: { type: string }
+                availability: { type: string, enum: [available, borrowed] }
+                location: { type: string }
       responses:
-        "201":
-          description: Resource created successfully
+        "201": { description: Resource created successfully }
 
   /resources/{id}:
     get:
       summary: Get a single resource
-      tags:
-        - Resources
+      tags: [Resources]
       parameters:
         - name: id
           in: path
           required: true
-          schema:
-            type: string
+          schema: { type: string }
       responses:
-        "200":
-          description: Resource details
+        "200": { description: Resource details }
     put:
       summary: Update a resource
-      tags:
-        - Resources
+      tags: [Resources]
+      security:
+        - BearerAuth: []
       parameters:
         - name: id
           in: path
           required: true
-          schema:
-            type: string
+          schema: { type: string }
       requestBody:
         required: true
         content:
@@ -242,168 +191,73 @@ paths:
             schema:
               type: object
               properties:
-                title:
-                  type: string
-                description:
-                  type: string
+                title: { type: string }
+                description: { type: string }
+                availability: { type: string, enum: [available, borrowed] }
+                location: { type: string }
       responses:
-        "200":
-          description: Resource updated successfully
+        "200": { description: Resource updated successfully }
     delete:
       summary: Delete a resource
-      tags:
-        - Resources
+      tags: [Resources]
+      security:
+        - BearerAuth: []
       parameters:
         - name: id
           in: path
           required: true
-          schema:
-            type: string
+          schema: { type: string }
       responses:
-        "200":
-          description: Resource deleted successfully
+        "200": { description: Resource deleted successfully }
 
-  # ✅ Help Requests API (UPDATED)
+  # ✅ Help Requests API
   /helprequests:
     get:
       summary: Get all help requests
-      tags:
-        - Help Requests
+      tags: [Help Requests]
       responses:
-        "200":
-          description: List of help requests
+        "200": { description: List of help requests }
     post:
       summary: Create a new help request
-      tags:
-        - Help Requests
+      tags: [Help Requests]
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required:
-                - description
-                - category
+              required: [description, category]
               properties:
-                description:
-                  type: string
-                category:
-                  type: string
+                description: { type: string }
+                category: { type: string }
       responses:
-        "201":
-          description: Help request created successfully
+        "201": { description: Help request created successfully }
 
-  /helprequests/{id}:
-    put:
-      summary: Update a help request
-      tags:
-        - Help Requests
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                description:
-                  type: string
-                category:
-                  type: string
-      responses:
-        "200":
-          description: Help request updated successfully
-
-    delete:
-      summary: Delete a help request
-      tags:
-        - Help Requests
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Help request deleted successfully
-
-  # ✅ Skill Sharing API (UPDATED)
-  /skillsharings:
+  # ✅ Messaging API
+  /messages:
     get:
-      summary: Get all skill-sharing listings
-      tags:
-        - Skill Sharing
+      summary: Get all messages
+      tags: [Messages]
+      security:
+        - BearerAuth: []
       responses:
-        "200":
-          description: List of skill-sharing listings
+        "200": { description: List of messages }
     post:
-      summary: Create a new skill listing
-      tags:
-        - Skill Sharing
+      summary: Send a message
+      tags: [Messages]
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required:
-                - skillName
-                - description
-                - userId
+              required: [senderId, receiverId, content]
               properties:
-                skillName:
-                  type: string
-                description:
-                  type: string
-                userId:
-                  type: string
+                senderId: { type: string }
+                receiverId: { type: string }
+                content: { type: string }
       responses:
-        "201":
-          description: Skill listing created successfully
+        "201": { description: Message sent successfully }
 
-  /skillsharings/{id}:
-    put:
-      summary: Update a skill listing
-      tags:
-        - Skill Sharing
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                skillName:
-                  type: string
-                description:
-                  type: string
-      responses:
-        "200":
-          description: Skill listing updated successfully
-
-    delete:
-      summary: Delete a skill listing
-      tags:
-        - Skill Sharing
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Skill listing deleted successfully
