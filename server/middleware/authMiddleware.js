@@ -4,6 +4,8 @@ const User = require("../models/User");
 const protect = async (req, res, next) => {
   let token;
 
+  console.log("Headers:", req.headers); // Debugging log
+
   if (
     req.headers.authorization &&
     req.headers.authorization.startsWith("Bearer")
@@ -13,9 +15,15 @@ const protect = async (req, res, next) => {
 
       // Decode token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      console.log("Decoded Token:", decoded); // Debugging log
 
-      // Attach user to request object (excluding password)
-      req.user = await User.findById(decoded.user.id).select("-password");
+      // Ensure decoded userId exists
+      if (!decoded.userId) {
+        return res.status(401).json({ msg: "Invalid token structure, unauthorized" });
+      }
+
+      // Attach user to request object
+      req.user = await User.findById(decoded.userId).select("-password");
 
       if (!req.user) {
         return res.status(401).json({ msg: "User not found, unauthorized" });
@@ -31,5 +39,4 @@ const protect = async (req, res, next) => {
   }
 };
 
-// ✅ Export as an object
 module.exports = { protect };
