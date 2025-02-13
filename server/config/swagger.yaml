@@ -193,6 +193,7 @@ paths:
               properties:
                 title: { type: string }
                 description: { type: string }
+                ownerId: { type: string }
                 availability: { type: string, enum: [available, borrowed] }
                 location: { type: string }
       responses:
@@ -210,6 +211,82 @@ paths:
       responses:
         "200": { description: Resource deleted successfully }
 
+  # ✅ Skill Sharing API
+  /skillsharings:
+    get:
+      summary: Get all skill-sharing listings
+      tags: [Skill Sharing]
+      responses:
+        "200": { description: List of skill-sharing listings }
+    post:
+      summary: Create a new skill listing
+      tags: [Skill Sharing]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [skillName, description, userId, availability, location]
+              properties:
+                skillName: { type: string }
+                description: { type: string }
+                userId: { type: string }
+                availability: { type: string, enum: [available, unavailable] }
+                location: { type: string }
+      responses:
+        "201": { description: Skill listing created successfully }
+
+  /skillsharings/{id}:
+    get:
+      summary: Get a single skill-sharing listing
+      tags: [Skill Sharing]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Skill-sharing listing details }
+    put:
+      summary: Update a skill-sharing listing
+      tags: [Skill Sharing]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                skillName: { type: string }
+                description: { type: string }
+                userId: { type: string }
+                availability: { type: string, enum: [available, unavailable] }
+                location: { type: string }
+      responses:
+        "200": { description: Skill-sharing listing updated successfully }
+    delete:
+      summary: Delete a skill-sharing listing
+      tags: [Skill Sharing]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Skill-sharing listing deleted successfully }
+
   # ✅ Help Requests API
   /helprequests:
     get:
@@ -220,23 +297,74 @@ paths:
     post:
       summary: Create a new help request
       tags: [Help Requests]
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [description, category]
+              required: [title, description, category, location]
               properties:
+                title: { type: string }
                 description: { type: string }
                 category: { type: string }
+                location: { type: string }
       responses:
         "201": { description: Help request created successfully }
+
+  /helprequests/{id}:
+    get:
+      summary: Get a single help request
+      tags: [Help Requests]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Help request details }
+    put:
+      summary: Update a help request
+      tags: [Help Requests]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                description: { type: string }
+                category: { type: string }
+                location: { type: string }
+      responses:
+        "200": { description: Help request updated successfully }
+    delete:
+      summary: Delete a help request
+      tags: [Help Requests]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Help request deleted successfully }
 
   # ✅ Messaging API
   /messages:
     get:
-      summary: Get all messages
+      summary: Get all messages (Admin/debugging only)
       tags: [Messages]
       security:
         - BearerAuth: []
@@ -253,11 +381,61 @@ paths:
           application/json:
             schema:
               type: object
-              required: [senderId, receiverId, content]
+              required: [receiverId, content]
               properties:
-                senderId: { type: string }
                 receiverId: { type: string }
                 content: { type: string }
       responses:
         "201": { description: Message sent successfully }
 
+  /messages/{userId1}/{userId2}:
+    get:
+      summary: Get messages between two users
+      tags: [Messages]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId1
+          in: path
+          required: true
+          schema: { type: string }
+        - name: userId2
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: List of messages between two users }
+
+  /messages/{id}:
+    delete:
+      summary: Delete a message
+      tags: [Messages]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Message deleted successfully }
+
+  # ✅ Users API
+  /users:
+    get:
+      summary: Get all users
+      tags: [Users]
+      responses:
+        "200": { description: List of users }
+
+  /users/{id}:
+    get:
+      summary: Get a single user
+      tags: [Users]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: User details }

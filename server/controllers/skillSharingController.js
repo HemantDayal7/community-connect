@@ -12,9 +12,11 @@ exports.getAllSkillSharings = async (req, res) => {
 
 // ✅ Create a new skill listing
 exports.createSkillSharing = async (req, res) => {
-  const { skillName, description, userId } = req.body;
+  const { skillName, description, userId, location } = req.body; // ✅ Add location
+
   try {
-    const skill = new SkillSharing({ skillName, description, userId });
+    console.log("Received Data:", req.body); // ✅ Debugging log
+    const skill = new SkillSharing({ skillName, description, userId, location }); // ✅ Include location
     await skill.save();
     res.status(201).json({ message: "Skill listing created successfully", skill });
   } catch (error) {
