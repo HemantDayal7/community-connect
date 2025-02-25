@@ -1,9 +1,28 @@
-const swaggerUi = require("swagger-ui-express");
-const YAML = require("yamljs");
-const path = require("path");
+import swaggerJSDoc from "swagger-jsdoc";
+import swaggerUi from "swagger-ui-express";
+import path from "path";
+import { fileURLToPath } from "url";
 
-const swaggerDocument = YAML.load(path.resolve(__dirname, "swagger.yaml"));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-module.exports = (app) => {
-    app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+const options = {
+    definition: {
+        openapi: "3.0.0",
+        info: {
+            title: "Community Connect API",
+            version: "1.0.0",
+            description: "API documentation for Community Connect Web Application",
+        },
+        servers: [{ url: "http://localhost:5050" }],
+    },
+    apis: [path.join(__dirname, "../config/swagger.yaml")], // ✅ Fixed path
 };
+
+const swaggerSpec = swaggerJSDoc(options);
+
+const setupSwagger = (app) => {
+    app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+};
+
+export default setupSwagger;

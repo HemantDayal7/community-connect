@@ -1,18 +1,14 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
-const HelpRequestSchema = new mongoose.Schema(
-  {
+const HelpRequestSchema = new mongoose.Schema({
     title: { type: String, required: true },
     description: { type: String, required: true },
     category: { type: String, required: true },
     location: { type: String, required: true },
     requesterId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    isDeleted: { type: Boolean, default: false },
-  },
-  { timestamps: true }
-);
+    helperId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    status: { type: String, enum: ["pending", "in-progress", "completed"], default: "pending" },
+    isDeleted: { type: Boolean, default: false }, // ✅ Added soft delete flag
+}, { timestamps: true });
 
-// ✅ Add indexing for better query performance
-HelpRequestSchema.index({ title: 1, category: 1 });
-
-module.exports = mongoose.model("HelpRequest", HelpRequestSchema);
+export default mongoose.model("HelpRequest", HelpRequestSchema);

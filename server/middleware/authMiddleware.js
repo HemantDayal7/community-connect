@@ -1,42 +1,32 @@
-const jwt = require("jsonwebtoken");
-const User = require("../models/User");
+import jwt from "jsonwebtoken";
+import User from "../models/User.js";
+import dotenv from "dotenv";
 
-const protect = async (req, res, next) => {
-  let token;
+dotenv.config();
 
-  console.log("Headers:", req.headers); // Debugging log
-
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith("Bearer")
-  ) {
+export const protect = async (req, res, next) => {
     try {
-      token = req.headers.authorization.split(" ")[1];
+        let token = req.headers.authorization;
 
-      // Decode token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      console.log("Decoded Token:", decoded); // Debugging log
+        if (!token || !token.startsWith("Bearer ")) {
+            return res.status(401).json({ message: "No token provided, authorization denied" });
+        }
 
-      // Ensure decoded userId exists
-      if (!decoded.userId) {
-        return res.status(401).json({ msg: "Invalid token structure, unauthorized" });
-      }
+        token = token.split(" ")[1];
 
-      // Attach user to request object
-      req.user = await User.findById(decoded.userId).select("-password");
+        jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
+            if (err) {
+                if (err.name === "TokenExpiredError") {
+                    return res.status(401).json({ message: "Token expired, please refresh" });
+                }
+                return res.status(401).json({ message: "Invalid token" });
+            }
 
-      if (!req.user) {
-        return res.status(401).json({ msg: "User not found, unauthorized" });
-      }
-
-      next();
+            req.user = await User.findById(decoded.id).select("-password");
+            next();
+        });
     } catch (error) {
-      console.error("Auth Middleware Error:", error);
-      res.status(401).json({ msg: "Token verification failed, unauthorized" });
+        console.error("Authentication error:", error.message);
+        return res.status(401).json({ message: "Token verification failed", error: error.message });
     }
-  } else {
-    return res.status(401).json({ msg: "No token provided, unauthorized" });
-  }
 };
-
-module.exports = { protect };

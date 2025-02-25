@@ -1,16 +1,18 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
-const UserSchema = new mongoose.Schema(
-  {
+const UserSchema = new mongoose.Schema({
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    avatar: { type: String, default: "" },
-    trustScore: { type: Number, default: 5 }, // Trust rating system
     role: { type: String, enum: ["user", "admin"], default: "user" },
-    isDeleted: { type: Boolean, default: false }, // Soft delete
-  },
-  { timestamps: true }
-);
+    trustScore: { type: Number, default: 5 },  // New field for reputation system
+    reviews: [{ 
+        reviewerId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        rating: { type: Number, min: 1, max: 5 },
+        comment: String,
+        createdAt: { type: Date, default: Date.now }
+    }],
+    isVerified: { type: Boolean, default: false }, // For email verification
+}, { timestamps: true });
 
-module.exports = mongoose.model("User", UserSchema);
+export default mongoose.model("User", UserSchema);

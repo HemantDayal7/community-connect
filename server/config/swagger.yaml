@@ -16,7 +16,7 @@ components:
 
 paths:
   # ✅ Authentication Endpoints
-  /auth/register:
+  /api/v1/auth/register:
     post:
       summary: Register a new user
       tags: [Authentication]
@@ -35,7 +35,7 @@ paths:
         "201": { description: User registered successfully }
         "400": { description: Bad Request (User already exists) }
 
-  /auth/login:
+  /api/v1/auth/login:
     post:
       summary: Login a user
       tags: [Authentication]
@@ -53,7 +53,7 @@ paths:
         "200": { description: User logged in successfully }
         "400": { description: Invalid Credentials }
 
-  /auth/me:
+  /api/v1/auth/me:
     get:
       summary: Get logged-in user details
       tags: [Authentication]
@@ -64,7 +64,7 @@ paths:
         "401": { description: Unauthorized (Invalid or missing token) }
 
   # ✅ Events API
-  /events:
+  /api/v1/events:
     get:
       summary: Get all events
       tags: [Events]
@@ -89,7 +89,7 @@ paths:
       responses:
         "201": { description: Event created successfully }
 
-  /events/{id}:
+  /api/v1/events/{id}:
     get:
       summary: Get a single event
       tags: [Events]
@@ -136,7 +136,7 @@ paths:
         "200": { description: Event deleted successfully }
 
   # ✅ Resources API
-  /resources:
+  /api/v1/resources:
     get:
       summary: Get all resources
       tags: [Resources]
@@ -158,12 +158,12 @@ paths:
                 title: { type: string }
                 description: { type: string }
                 ownerId: { type: string }
-                availability: { type: string, enum: [available, borrowed] }
+                availability: { type: string, enum: ["available", "not available"] }
                 location: { type: string }
       responses:
         "201": { description: Resource created successfully }
 
-  /resources/{id}:
+  /api/v1/resources/{id}:
     get:
       summary: Get a single resource
       tags: [Resources]
@@ -194,7 +194,7 @@ paths:
                 title: { type: string }
                 description: { type: string }
                 ownerId: { type: string }
-                availability: { type: string, enum: [available, borrowed] }
+                availability: { type: string, enum: ["available", "not available"] }
                 location: { type: string }
       responses:
         "200": { description: Resource updated successfully }
@@ -212,7 +212,7 @@ paths:
         "200": { description: Resource deleted successfully }
 
   # ✅ Skill Sharing API
-  /skillsharings:
+  /api/v1/skillsharings:
     get:
       summary: Get all skill-sharing listings
       tags: [Skill Sharing]
@@ -234,12 +234,12 @@ paths:
                 skillName: { type: string }
                 description: { type: string }
                 userId: { type: string }
-                availability: { type: string, enum: [available, unavailable] }
+                availability: { type: string, enum: ["available", "unavailable"] }
                 location: { type: string }
       responses:
         "201": { description: Skill listing created successfully }
 
-  /skillsharings/{id}:
+  /api/v1/skillsharings/{id}:
     get:
       summary: Get a single skill-sharing listing
       tags: [Skill Sharing]
@@ -270,7 +270,7 @@ paths:
                 skillName: { type: string }
                 description: { type: string }
                 userId: { type: string }
-                availability: { type: string, enum: [available, unavailable] }
+                availability: { type: string, enum: ["available", "unavailable"] }
                 location: { type: string }
       responses:
         "200": { description: Skill-sharing listing updated successfully }
@@ -288,7 +288,7 @@ paths:
         "200": { description: Skill-sharing listing deleted successfully }
 
   # ✅ Help Requests API
-  /helprequests:
+  /api/v1/helprequests:
     get:
       summary: Get all help requests
       tags: [Help Requests]
@@ -314,7 +314,7 @@ paths:
       responses:
         "201": { description: Help request created successfully }
 
-  /helprequests/{id}:
+  /api/v1/helprequests/{id}:
     get:
       summary: Get a single help request
       tags: [Help Requests]
@@ -361,17 +361,34 @@ paths:
       responses:
         "200": { description: Help request deleted successfully }
 
-  # ✅ Messaging API
-  /messages:
+  # ✅ Messages API
+  /api/v1/messages:
     get:
-      summary: Get all messages (Admin/debugging only)
+      summary: Get all conversations (Inbox view)
+      description: Returns the latest message for each unique conversation the authenticated user has participated in.
       tags: [Messages]
       security:
         - BearerAuth: []
       responses:
-        "200": { description: List of messages }
+        "200":
+          description: Inbox retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    _id: { type: string }
+                    senderId: { type: string }
+                    receiverId: { type: string }
+                    content: { type: string }
+                    timestamp: { type: string, format: date-time }
+        "401": { description: Unauthorized (Invalid or missing token) }
+
     post:
       summary: Send a message
+      description: Allows a user to send a message to another user.
       tags: [Messages]
       security:
         - BearerAuth: []
@@ -387,10 +404,13 @@ paths:
                 content: { type: string }
       responses:
         "201": { description: Message sent successfully }
+        "400": { description: Bad Request (Invalid input or missing fields) }
+        "401": { description: Unauthorized (User not logged in) }
 
-  /messages/{userId1}/{userId2}:
+  /api/v1/messages/{userId1}/{userId2}:
     get:
-      summary: Get messages between two users
+      summary: Get messages between two users (Chat History)
+      description: Retrieves messages exchanged between two users.
       tags: [Messages]
       security:
         - BearerAuth: []
@@ -404,11 +424,26 @@ paths:
           required: true
           schema: { type: string }
       responses:
-        "200": { description: List of messages between two users }
+        "200":
+          description: List of messages between two users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    _id: { type: string }
+                    senderId: { type: string }
+                    receiverId: { type: string }
+                    content: { type: string }
+                    timestamp: { type: string, format: date-time }
+        "401": { description: Unauthorized (Invalid or missing token) }
 
-  /messages/{id}:
+  /api/v1/messages/{id}:
     delete:
-      summary: Delete a message
+      summary: Delete a message (Soft Delete)
+      description: Deletes a message if the **authenticated user is the sender or receiver**.
       tags: [Messages]
       security:
         - BearerAuth: []
@@ -419,23 +454,43 @@ paths:
           schema: { type: string }
       responses:
         "200": { description: Message deleted successfully }
+        "403": { description: Forbidden (Only sender or receiver can delete) }
+        "404": { description: Message not found }
 
   # ✅ Users API
-  /users:
+  /api/v1/users:
     get:
       summary: Get all users
       tags: [Users]
+      security:
+        - BearerAuth: []  
       responses:
-        "200": { description: List of users }
+        "200": 
+          description: List of users
+        "401":
+          description: Unauthorized (Invalid or missing token)
 
-  /users/{id}:
+  /api/v1/users/{id}:
     get:
       summary: Get a single user
       tags: [Users]
+      security:
+        - BearerAuth: []  
       parameters:
         - name: id
           in: path
           required: true
           schema: { type: string }
       responses:
-        "200": { description: User details }
+        "200":
+          description: User details
+        "401":
+          description: Unauthorized (Invalid or missing token)
+
+  # ✅ Health Check API
+  /api/v1/health:
+    get:
+      summary: Check API health status
+      tags: [Health Check]
+      responses:
+        "200": { description: API is running and database is connected }

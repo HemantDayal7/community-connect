@@ -45,7 +45,7 @@ const seedDatabase = async (option) => {
       await User.deleteMany({});
       logger.info("✅ Users collection reset.");
     } else if (option === "3") {
-      await Event.deleteMany({});
+      await Event.deleteMany({});s
       logger.info("✅ Events collection reset.");
     } else if (option === "4") {
       await Resource.deleteMany({});
