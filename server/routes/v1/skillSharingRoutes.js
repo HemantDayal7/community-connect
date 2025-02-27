@@ -1,19 +1,19 @@
 import express from "express";
 import { body, param } from "express-validator";
-import { protect } from "../../middleware/authMiddleware.js"; 
+import { protect } from "../../middleware/authMiddleware.js";
 import {
   getAllSkillSharings,
   createSkillSharing,
   getSkillSharingById,
   updateSkillSharing,
   deleteSkillSharing,
-} from "../../controllers/skill/skillSharingController.js"; 
+} from "../../controllers/skill/skillSharingController.js";
 
 const router = express.Router();
 
 // ✅ Validation Middleware
 const validateSkillSharing = [
-  body("skillName").notEmpty().withMessage("Skill name is required"),
+  body("title").notEmpty().withMessage("Skill title is required"),
   body("description").notEmpty().withMessage("Description is required"),
   body("location").notEmpty().withMessage("Location is required"),
   body("availability")
@@ -25,24 +25,19 @@ const validateSkillId = [
   param("id").isMongoId().withMessage("Invalid Skill ID format"),
 ];
 
-// @route    GET /api/v1/skillsharings
-// @desc     Get all skill-sharing listings
+// ✅ Get all skill-sharing listings
 router.get("/", getAllSkillSharings);
 
-// @route    POST /api/v1/skillsharings
-// @desc     Create a new skill listing (Authentication required)
+// ✅ Create a new skill listing (Protected)
 router.post("/", protect, validateSkillSharing, createSkillSharing);
 
-// @route    GET /api/v1/skillsharings/:id
-// @desc     Get a single skill listing by ID
+// ✅ Get a single skill listing by ID
 router.get("/:id", validateSkillId, getSkillSharingById);
 
-// @route    PUT /api/v1/skillsharings/:id
-// @desc     Update a skill listing (Only the owner can update)
+// ✅ Update a skill listing (Only owner can update)
 router.put("/:id", protect, validateSkillId, updateSkillSharing);
 
-// @route    DELETE /api/v1/skillsharings/:id
-// @desc     Delete a skill listing (Only the owner can delete)
+// ✅ Delete a skill listing (Only owner can delete)
 router.delete("/:id", protect, validateSkillId, deleteSkillSharing);
 
 export default router;

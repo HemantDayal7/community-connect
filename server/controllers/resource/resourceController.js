@@ -7,7 +7,8 @@ import { validationResult } from "express-validator";
  * @access Private
  */
 export const createResource = async (req, res) => {
-  // ✅ Validate input
+  console.log("📥 Received Request Body:", req.body);
+
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
@@ -16,16 +17,32 @@ export const createResource = async (req, res) => {
   try {
     const { title, description, ownerId, availability, category, location } = req.body;
 
-    const resource = new Resource({ title, description, ownerId, availability, category, location });
+    // ✅ Validate `availability` format
+    if (!["available", "borrowed"].includes(availability)) {
+      return res.status(400).json({ message: "Invalid availability format. Must be 'available' or 'borrowed'." });
+    }
+
+    // ✅ Validate `ownerId`
+    if (!ownerId.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ message: "Invalid ownerId format." });
+    }
+
+    const resource = new Resource({
+      title,
+      description,
+      ownerId,
+      availability,
+      category,
+      location,
+    });
+
     await resource.save();
 
-    res.status(201).json({
-      message: "✅ Resource created successfully",
-      resource,
-    });
+    console.log("✅ Resource created successfully:", resource);
+    res.status(201).json({ message: "✅ Resource created successfully", resource });
   } catch (error) {
-    console.error("🔥 Error creating resource:", error.message);
-    res.status(500).json({ error: error.message });
+    console.error("🔥 Error creating resource:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
@@ -37,10 +54,10 @@ export const createResource = async (req, res) => {
 export const getAllResources = async (req, res) => {
   try {
     const resources = await Resource.find();
-    res.json(resources);
+    res.status(200).json(resources);
   } catch (error) {
-    console.error("🔥 Error fetching all resources:", error.message);
-    res.status(500).json({ error: error.message });
+    console.error("🔥 Error fetching all resources:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
@@ -50,26 +67,24 @@ export const getAllResources = async (req, res) => {
  * @access Public
  */
 export const getResourceById = async (req, res) => {
-  // ✅ Validate input
+  console.log("🔍 Fetching resource with ID:", req.params.id);
+
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
 
   try {
-    console.log("🔍 Fetching resource with ID:", req.params.id);
-
     const resource = await Resource.findById(req.params.id);
     if (!resource) {
-      console.log("❌ Resource not found");
       return res.status(404).json({ message: "Resource not found" });
     }
 
     console.log("✅ Resource found:", resource);
-    res.json(resource);
+    res.status(200).json(resource);
   } catch (error) {
-    console.error("🔥 Error fetching resource:", error.message);
-    res.status(500).json({ error: error.message });
+    console.error("🔥 Error fetching resource:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
@@ -79,18 +94,16 @@ export const getResourceById = async (req, res) => {
  * @access Private
  */
 export const updateResource = async (req, res) => {
-  // ✅ Validate input
+  console.log("🔄 Updating resource with ID:", req.params.id);
+
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
 
   try {
-    console.log("🔄 Updating resource with ID:", req.params.id);
-
     const resource = await Resource.findById(req.params.id);
     if (!resource) {
-      console.log("❌ Resource not found");
       return res.status(404).json({ message: "Resource not found" });
     }
 
@@ -98,44 +111,39 @@ export const updateResource = async (req, res) => {
     await resource.save();
 
     console.log("✅ Resource updated successfully");
-    res.json({
-      message: "Resource updated successfully",
-      resource,
-    });
+    res.status(200).json({ message: "Resource updated successfully", resource });
   } catch (error) {
-    console.error("🔥 Error updating resource:", error.message);
-    res.status(500).json({ error: error.message });
+    console.error("🔥 Error updating resource:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
 /**
- * @desc Soft delete a resource
+ * @desc Delete a resource
  * @route DELETE /api/v1/resources/:id
  * @access Private
  */
 export const deleteResource = async (req, res) => {
-  // ✅ Validate input
+  console.log("🗑 Deleting resource with ID:", req.params.id);
+
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
 
   try {
-    console.log("🗑 Deleting resource with ID:", req.params.id);
-
     const resource = await Resource.findById(req.params.id);
     if (!resource) {
-      console.log("❌ Resource not found");
       return res.status(404).json({ message: "Resource not found" });
     }
 
-    await Resource.findByIdAndDelete(req.params.id);
+    await resource.deleteOne();
 
     console.log("✅ Resource deleted successfully");
-    res.json({ message: "Resource deleted successfully" });
+    res.status(200).json({ message: "Resource deleted successfully" });
   } catch (error) {
-    console.error("🔥 Error deleting resource:", error.message);
-    res.status(500).json({ error: error.message });
+    console.error("🔥 Error deleting resource:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
@@ -145,7 +153,6 @@ export const deleteResource = async (req, res) => {
  * @access Private
  */
 export const borrowResource = async (req, res) => {
-  // ✅ Validate input
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
@@ -158,9 +165,9 @@ export const borrowResource = async (req, res) => {
 
     const resource = await Resource.findById(resourceId);
     if (!resource) {
-      console.log("❌ Resource not found");
       return res.status(404).json({ message: "Resource not found" });
     }
+
     if (resource.availability === "borrowed") {
       return res.status(400).json({ message: "Resource is already borrowed" });
     }
@@ -170,12 +177,9 @@ export const borrowResource = async (req, res) => {
     await resource.save();
 
     console.log("✅ Resource borrowed successfully");
-    res.json({
-      message: "Resource borrowed successfully",
-      resource,
-    });
+    res.status(200).json({ message: "Resource borrowed successfully", resource });
   } catch (error) {
-    console.error("🔥 Error borrowing resource:", error.message);
-    res.status(500).json({ error: error.message });
+    console.error("🔥 Error borrowing resource:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };

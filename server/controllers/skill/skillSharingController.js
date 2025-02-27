@@ -1,7 +1,11 @@
-import SkillSharing from "../../models/SkillSharing.js"; 
+import SkillSharing from "../../models/SkillSharing.js";
 import { validationResult } from "express-validator";
 
-// ✅ Get all skill-sharing listings
+/**
+ * @desc Get all skill-sharing listings
+ * @route GET /api/v1/skillsharings
+ * @access Public
+ */
 export const getAllSkillSharings = async (req, res) => {
   try {
     const skills = await SkillSharing.find().populate("userId", "name email");
@@ -12,25 +16,28 @@ export const getAllSkillSharings = async (req, res) => {
   }
 };
 
-// ✅ Create a new skill listing
+/**
+ * @desc Create a new skill listing
+ * @route POST /api/v1/skillsharings
+ * @access Private
+ */
 export const createSkillSharing = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    console.error("🔥 Validation failed:", errors.array());
     return res.status(400).json({ errors: errors.array() });
   }
 
   try {
     console.log("📌 Received skill data:", req.body);
 
-    const { skillName, description, location, availability } = req.body;
+    const { title, description, location, availability } = req.body;
 
     if (!req.user || !req.user._id) {
       return res.status(401).json({ message: "Unauthorized: User ID missing" });
     }
 
     const skill = new SkillSharing({
-      skillName,
+      title, // ✅ Now matches the updated model
       description,
       location,
       availability,
@@ -45,9 +52,12 @@ export const createSkillSharing = async (req, res) => {
   }
 };
 
-// ✅ Get a single skill listing
+/**
+ * @desc Get a single skill listing
+ * @route GET /api/v1/skillsharings/:id
+ * @access Public
+ */
 export const getSkillSharingById = async (req, res) => {
-  // ✅ Validate input
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
@@ -65,9 +75,12 @@ export const getSkillSharingById = async (req, res) => {
   }
 };
 
-// ✅ Update a skill listing (Only owner can update)
+/**
+ * @desc Update a skill listing (Only owner can update)
+ * @route PUT /api/v1/skillsharings/:id
+ * @access Private
+ */
 export const updateSkillSharing = async (req, res) => {
-  // ✅ Validate input
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
@@ -92,7 +105,11 @@ export const updateSkillSharing = async (req, res) => {
   }
 };
 
-// ✅ Delete a skill listing
+/**
+ * @desc Delete a skill listing (Only owner can delete)
+ * @route DELETE /api/v1/skillsharings/:id
+ * @access Private
+ */
 export const deleteSkillSharing = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
