@@ -1,4 +1,5 @@
 import Resource from "../../models/Resource.js";
+import { validationResult } from "express-validator";
 
 /**
  * @desc Create a new resource
@@ -6,15 +7,15 @@ import Resource from "../../models/Resource.js";
  * @access Private
  */
 export const createResource = async (req, res) => {
-  const { title, description, ownerId, availability, category, location } = req.body;
+  // ✅ Validate input
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
 
   try {
-    // Validate required fields manually
-    if (!title || !description || !ownerId || !availability || !category || !location) {
-      return res.status(400).json({ error: "All fields are required." });
-    }
+    const { title, description, ownerId, availability, category, location } = req.body;
 
-    // Create a new resource
     const resource = new Resource({ title, description, ownerId, availability, category, location });
     await resource.save();
 
@@ -49,6 +50,12 @@ export const getAllResources = async (req, res) => {
  * @access Public
  */
 export const getResourceById = async (req, res) => {
+  // ✅ Validate input
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
   try {
     console.log("🔍 Fetching resource with ID:", req.params.id);
 
@@ -72,6 +79,12 @@ export const getResourceById = async (req, res) => {
  * @access Private
  */
 export const updateResource = async (req, res) => {
+  // ✅ Validate input
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
   try {
     console.log("🔄 Updating resource with ID:", req.params.id);
 
@@ -101,6 +114,12 @@ export const updateResource = async (req, res) => {
  * @access Private
  */
 export const deleteResource = async (req, res) => {
+  // ✅ Validate input
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
   try {
     console.log("🗑 Deleting resource with ID:", req.params.id);
 
@@ -126,6 +145,12 @@ export const deleteResource = async (req, res) => {
  * @access Private
  */
 export const borrowResource = async (req, res) => {
+  // ✅ Validate input
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
   const { resourceId, userId } = req.body;
 
   try {

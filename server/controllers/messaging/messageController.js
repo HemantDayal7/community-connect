@@ -1,20 +1,23 @@
 import mongoose from "mongoose";
+import { validationResult } from "express-validator";
 import Message from "../../models/Message.js";
 import User from "../../models/User.js";
 
 // ✅ Send a new message
 export const sendMessage = async (req, res) => {
+  // ✅ Validate input
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
   try {
     const senderId = req.user.id;
     const { receiverId, content } = req.body;
 
-    if (!receiverId || !content) {
-      return res.status(400).json({ message: "Receiver ID and content are required." });
-    }
-
     const receiver = await User.findById(receiverId);
     if (!receiver) {
-      return res.status(404).json({ message: "Receiver not found." });
+      return res.status(404).json({ message: "❌ Receiver not found." });
     }
 
     const message = await Message.create({ senderId, receiverId, content });
@@ -23,9 +26,9 @@ export const sendMessage = async (req, res) => {
       .populate("senderId", "name email")
       .populate("receiverId", "name email");
 
-    res.status(201).json({ message: "Message sent successfully.", data: populatedMessage });
+    res.status(201).json({ message: "✅ Message sent successfully.", data: populatedMessage });
   } catch (error) {
-    console.error("🔥 Error sending message:", error);
+    console.error("🔥 Error sending message:", error.message);
     res.status(500).json({ error: "Internal Server Error", details: error.message });
   }
 };
@@ -60,15 +63,21 @@ export const getAllConversations = async (req, res) => {
       }
     ]);
 
-    res.status(200).json(messages);
+    res.status(200).json({ success: true, conversations: messages });
   } catch (error) {
-    console.error("🔥 Error fetching conversations:", error);
+    console.error("🔥 Error fetching conversations:", error.message);
     res.status(500).json({ error: "Internal Server Error", details: error.message });
   }
 };
 
 // ✅ Get messages between two users (Chat history)
 export const getMessagesBetweenUsers = async (req, res) => {
+  // ✅ Validate input
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
   try {
     const { userId1, userId2 } = req.params;
 
@@ -87,31 +96,37 @@ export const getMessagesBetweenUsers = async (req, res) => {
       .populate("receiverId", "name email")
       .sort({ createdAt: 1 });
 
-    res.status(200).json(messages);
+    res.status(200).json({ success: true, messages });
   } catch (error) {
-    console.error("🔥 Error fetching chat history:", error);
+    console.error("🔥 Error fetching chat history:", error.message);
     res.status(500).json({ error: "Internal Server Error", details: error.message });
   }
 };
 
 // ✅ Soft delete a message (Only sender or receiver can delete)
 export const deleteMessage = async (req, res) => {
+  // ✅ Validate input
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
   try {
     const message = await Message.findById(req.params.id);
     if (!message) {
-      return res.status(404).json({ message: "Message not found." });
+      return res.status(404).json({ message: "❌ Message not found." });
     }
 
     if (message.senderId.toString() !== req.user.id && message.receiverId.toString() !== req.user.id) {
-      return res.status(403).json({ message: "Unauthorized: You can only delete your own messages." });
+      return res.status(403).json({ message: "🚫 Unauthorized: You can only delete your own messages." });
     }
 
     message.isDeleted = true;
     await message.save();
 
-    res.status(200).json({ message: "Message deleted successfully." });
+    res.status(200).json({ success: true, message: "✅ Message deleted successfully." });
   } catch (error) {
-    console.error("🔥 Error deleting message:", error);
+    console.error("🔥 Error deleting message:", error.message);
     res.status(500).json({ error: "Internal Server Error", details: error.message });
   }
 };

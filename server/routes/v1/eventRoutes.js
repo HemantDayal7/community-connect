@@ -1,48 +1,58 @@
 import express from "express";
-import { check } from "express-validator";
-import { protect } from "../../middleware/authMiddleware.js"; // ✅ Fix path
+import { body, param } from "express-validator"; // ✅ Ensuring `body` is imported
+import { protect } from "../../middleware/authMiddleware.js"; 
 import {
   createEvent,
   getEvents,
   getEventById,
   updateEvent,
   deleteEvent,
-} from "../../controllers/event/eventController.js"; // ✅ Fix path
+  rsvpEvent,
+} from "../../controllers/event/eventController.js"; 
 
 const router = express.Router();
 
-// @route    POST /events
-// @desc     Create a new event
-// @access   Private (Requires Auth)
-router.post(
-  "/",
-  protect,
-  [
-    check("title", "Title is required").not().isEmpty(),
-    check("date", "Valid date is required").isISO8601(),
-    check("location", "Location is required").not().isEmpty(),
-  ],
-  createEvent
-);
+// ✅ Validation Middleware for Event Creation/Update
+const validateEvent = [
+  body("title").notEmpty().withMessage("Title is required"),
+  body("date").isISO8601().withMessage("Invalid date format"),
+  body("location").notEmpty().withMessage("Location is required"),
+  body("hostId").isMongoId().withMessage("Invalid host ID"),
+];
 
-// @route    GET /events
+// ✅ Validation Middleware for Event ID
+const validateEventId = [
+  param("id").isMongoId().withMessage("Invalid Event ID format"),
+];
+
+// ✅ Validation Middleware for RSVP
+const validateRSVP = [
+  body("eventId").isMongoId().withMessage("Invalid Event ID"),
+  body("userId").isMongoId().withMessage("Invalid User ID"),
+];
+
+// @route    GET /api/v1/events
 // @desc     Get all events
-// @access   Public
 router.get("/", getEvents);
 
-// @route    GET /events/:id
-// @desc     Get event details
-// @access   Public
-router.get("/:id", getEventById);
+// @route    POST /api/v1/events
+// @desc     Create a new event (Authenticated Users)
+router.post("/", protect, validateEvent, createEvent);
 
-// @route    PUT /events/:id
-// @desc     Update an event
-// @access   Private (Only Host can update)
-router.put("/:id", protect, updateEvent);
+// @route    GET /api/v1/events/:id
+// @desc     Get a single event by ID
+router.get("/:id", validateEventId, getEventById);
 
-// @route    DELETE /events/:id
-// @desc     Delete an event
-// @access   Private (Only Host can delete)
-router.delete("/:id", protect, deleteEvent);
+// @route    PUT /api/v1/events/:id
+// @desc     Update an event (Only Host)
+router.put("/:id", protect, validateEventId, updateEvent);
 
-export default router; // ✅ Ensure default export
+// @route    DELETE /api/v1/events/:id
+// @desc     Delete an event (Only Host)
+router.delete("/:id", protect, validateEventId, deleteEvent);
+
+// @route    POST /api/v1/events/rsvp
+// @desc     RSVP to an event (Authenticated Users)
+router.post("/rsvp", protect, validateRSVP, rsvpEvent);
+
+export default router;
