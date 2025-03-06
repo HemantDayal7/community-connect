@@ -21,6 +21,13 @@ coverage/
 package-lock.json
 yarn.lock
 
-# ✅ Allow `.env` file in development, but ignore it for production
-.env.example
-# .env  <-- Comment this out if needed for local dev (or remove it)
+# Ignore Environment Variables
+.env
+.env.local
+.env.development
+.env.production
+
+# Ignore Editor & System Files
+.vscode/
+.idea/
+*.swp

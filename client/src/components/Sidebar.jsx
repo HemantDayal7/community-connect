@@ -1,15 +1,24 @@
+import React from "react";
 import { Link } from "react-router-dom";
 
-function Sidebar() {
+export default function Sidebar() {
   return (
-    <aside className="w-60 bg-gray-800 text-white min-h-screen p-5">
-      <h2 className="text-lg font-bold mb-4">Menu</h2>
-      <ul className="space-y-3">
-        <li><Link to="/" className="block hover:bg-gray-700 p-2 rounded">Home</Link></li>
-        <li><Link to="/about" className="block hover:bg-gray-700 p-2 rounded">About</Link></li>
-      </ul>
+    <aside className="bg-gray-100 w-64 p-4 hidden md:block">
+      <nav className="flex flex-col space-y-2">
+        <Link to="/home" className="hover:bg-gray-200 p-2 rounded">
+          Home
+        </Link>
+        {/* Add more links as needed */}
+        <Link to="/resources" className="hover:bg-gray-200 p-2 rounded">
+          Resources
+        </Link>
+        <Link to="/events" className="hover:bg-gray-200 p-2 rounded">
+          Events
+        </Link>
+        <Link to="/help" className="hover:bg-gray-200 p-2 rounded">
+          Help Requests
+        </Link>
+      </nav>
     </aside>
   );
 }
-
-export default Sidebar;
