@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import API from "../../services/api"; // Ensure this is correctly set up
+import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
 
 export default function Register() {
   const navigate = useNavigate();
-  const [fullName, setFullName] = useState(""); // Keeping this for form control
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -12,14 +13,14 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await API.post("/auth/register", { name: fullName, email, password }); // ✅ FIXED URL
+      await API.post("/auth/register", { name: fullName, email, password });
       alert("Registration successful. Please log in.");
       navigate("/");
     } catch (err) {
       console.error("Registration failed:", err);
       alert("Error registering. Try again.");
     }
-  };  
+  };
 
   return (
     <>
@@ -75,7 +76,7 @@ export default function Register() {
               />
             </div>
 
-            {/* Password Field with Eye Toggle */}
+            {/* Password Field with Eye Toggle using Heroicons */}
             <div className="mb-4 relative">
               <label className="block text-gray-700 text-sm font-semibold mb-1">
                 Password
@@ -88,13 +89,16 @@ export default function Register() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
-              {/* Eye Toggle */}
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-9 text-gray-600"
               >
-                {showPassword ? "🙈" : "👁"}
+                {showPassword ? (
+                  <EyeSlashIcon className="w-5 h-5" />
+                ) : (
+                  <EyeIcon className="w-5 h-5" />
+                )}
               </button>
             </div>
 

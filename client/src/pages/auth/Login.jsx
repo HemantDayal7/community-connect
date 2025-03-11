@@ -1,33 +1,42 @@
-import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import API from "../../services/api"; // Adjust path if needed
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
+import { loginUser } from "../../services/authService";
+import { useAuth } from "../../context/AuthContext";
 
 export default function Login() {
-  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const navigate = useNavigate();
+  const { login } = useAuth(); // Use the auth context
 
-  // Handle login form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+
     try {
-      const res = await API.post("/auth/login", { email, password });
-      localStorage.setItem("token", res.data.token);
+      const data = await loginUser({ email, password });
+      // Update auth state using the context
+      await login(data.accessToken, data.user);
+      // Navigate after state is updated
       navigate("/home");
     } catch (err) {
       console.error("Login failed:", err);
-      alert("Invalid credentials");
+      setError("Invalid email or password. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Custom smooth scroll to the #features section
   const handleScrollToFeatures = () => {
     const featuresSection = document.getElementById("features");
     if (featuresSection) {
-      const offsetTop = featuresSection.offsetTop;
       window.scrollTo({
-        top: offsetTop,
+        top: featuresSection.offsetTop,
         behavior: "smooth",
       });
     }
@@ -50,12 +59,12 @@ export default function Login() {
               >
                 Features
               </button>
-              <a href="#" className="text-white hover:underline text-lg">
+              <button className="text-white hover:underline text-lg">
                 Public Services
-              </a>
-              <a href="#" className="text-white hover:underline text-lg">
+              </button>
+              <button className="text-white hover:underline text-lg">
                 Business
-              </a>
+              </button>
             </nav>
           </div>
 
@@ -68,7 +77,7 @@ export default function Login() {
         </div>
       </header>
 
-      {/* HERO BACKGROUND + LOGIN FORM (Full screen) */}
+      {/* HERO BACKGROUND + LOGIN FORM */}
       <div
         className="relative w-full h-screen bg-cover bg-center flex items-center justify-center"
         style={{
@@ -79,19 +88,20 @@ export default function Login() {
       >
         {/* White box container for login */}
         <div className="relative z-10 max-w-sm w-full bg-white rounded-lg shadow-md p-6 mx-4 mt-16">
-          {/* Title */}
           <h1 className="text-2xl font-bold mb-3 text-center">
             Connect with Your Neighbours
           </h1>
-
-          {/* Subtitle */}
           <p className="text-base text-gray-700 text-center mb-4">
             Share resources, find local events, and help your neighbourhood!
           </p>
 
-          {/* Login Form */}
+          {error && (
+            <div className="mb-4 p-2 bg-red-100 border border-red-400 text-red-700 rounded">
+              {error}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit}>
-            {/* Email Field */}
             <div className="mb-3">
               <label className="block text-gray-700 text-base font-semibold mb-1">
                 Email address
@@ -106,7 +116,6 @@ export default function Login() {
               />
             </div>
 
-            {/* Password Field with Toggle */}
             <div className="mb-4 relative">
               <label className="block text-gray-700 text-base font-semibold mb-1">
                 Password
@@ -119,40 +128,47 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
-              {/* Eye Toggle */}
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-9 text-gray-600"
               >
-                {showPassword ? "🙈" : "👁"}
+                {showPassword ? (
+                  <EyeSlashIcon className="w-5 h-5" />
+                ) : (
+                  <EyeIcon className="w-5 h-5" />
+                )}
               </button>
             </div>
 
             <button
               type="submit"
-              className="bg-[#69C143] text-black w-full py-2 rounded font-semibold hover:bg-[#58AE3A] transition-colors text-lg"
+              disabled={isLoading}
+              className={`bg-[#69C143] text-black w-full py-2 rounded font-semibold ${
+                isLoading ? "opacity-70 cursor-not-allowed" : "hover:bg-[#58AE3A]"
+              } transition-colors text-lg`}
             >
-              Continue
+              {isLoading ? "Signing in..." : "Continue"}
             </button>
           </form>
 
-          {/* Disclaimer */}
+          <div className="text-center mt-3">
+            <button
+              onClick={handleScrollToFeatures}
+              className="text-blue-600 hover:underline"
+            >
+              Learn more about Community Connect
+            </button>
+          </div>
+
           <p className="text-sm text-gray-600 text-center mt-4">
             By logging in, you agree to our{" "}
-            <a href="#" className="underline">
-              Terms &amp; Conditions
-            </a>{" "}
-            and{" "}
-            <a href="#" className="underline">
-              Privacy Policy
-            </a>
-            .
+            <button className="underline">Terms &amp; Conditions</button> and{" "}
+            <button className="underline">Privacy Policy</button>.
           </p>
 
-          {/* Link to Register => "Register" */}
           <p className="text-base text-center mt-4">
-            Don’t have an account?{" "}
+            Don&apos;t have an account?{" "}
             <Link to="/register" className="text-blue-600 hover:underline">
               Register
             </Link>
@@ -160,30 +176,22 @@ export default function Login() {
         </div>
       </div>
 
-      {/* FEATURES SECTION => Full screen as well */}
+      {/* FEATURES SECTION */}
       <section
         id="features"
         className="w-full h-screen bg-white flex flex-col items-center justify-center px-4"
       >
-        {/* Container for content */}
         <div className="max-w-4xl w-full text-center">
-          {/* Headline / Title */}
           <h2 className="text-3xl font-bold mb-6">
             Explore the Power of Community Connect
           </h2>
-
-          {/* Project Overview */}
           <p className="text-base text-gray-700 mb-8 mx-auto">
             Community Connect is a hyper-local platform that brings neighbours
             together for resource sharing, skill exchange, urgent help requests,
             event hosting, and real-time messaging. By reducing waste, promoting
-            collaboration, and fostering trust, we empower communities to
-            thrive.
+            collaboration, and fostering trust, we empower communities to thrive.
           </p>
-
-          {/* Three Core Features with Icons => center them horizontally */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Feature 1 */}
             <div>
               <div className="text-5xl mb-2">🔧</div>
               <h3 className="text-2xl font-semibold mb-2">Resource Sharing</h3>
@@ -192,7 +200,6 @@ export default function Login() {
                 neighbours save money.
               </p>
             </div>
-            {/* Feature 2 */}
             <div>
               <div className="text-5xl mb-2">💡</div>
               <h3 className="text-2xl font-semibold mb-2">Skill Exchange</h3>
@@ -201,7 +208,6 @@ export default function Login() {
                 fostering a culture of mutual support.
               </p>
             </div>
-            {/* Feature 3 */}
             <div>
               <div className="text-5xl mb-2">📅</div>
               <h3 className="text-2xl font-semibold mb-2">Event Hosting</h3>
@@ -211,8 +217,6 @@ export default function Login() {
               </p>
             </div>
           </div>
-
-          {/* Call-to-action */}
           <div className="mt-12">
             <h3 className="text-2xl font-semibold mb-3">
               Instantly connect with your neighbourhood
