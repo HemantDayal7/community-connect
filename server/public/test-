@@ -1,0 +1,98 @@
+image.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Image Loading Test</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .image-test { margin-bottom: 20px; border: 1px solid #ddd; padding: 10px; }
+    img { max-width: 300px; max-height: 200px; display: block; margin: 10px 0; }
+    .success { color: green; }
+    .error { color: red; }
+  </style>
+</head>
+<body>
+  <h1>Image Loading Test</h1>
+  <div id="results"></div>
+
+  <script>
+    // Function to test loading an image
+    async function testImage(url, description) {
+      console.log(`Testing image: ${url}`);
+      const container = document.createElement('div');
+      container.className = 'image-test';
+      container.innerHTML = `
+        <h3>${description}</h3>
+        <p>URL: ${url}</p>
+        <div class="status">Loading...</div>
+      `;
+      
+      document.getElementById('results').appendChild(container);
+      
+      const statusDiv = container.querySelector('.status');
+      const img = document.createElement('img');
+      
+      img.onload = () => {
+        statusDiv.innerHTML = `<span class="success">✅ SUCCESS: Image loaded successfully</span>`;
+        container.appendChild(img);
+      };
+      
+      img.onerror = (e) => {
+        statusDiv.innerHTML = `<span class="error">❌ ERROR: Failed to load image</span>`;
+        console.error(`Failed to load: ${url}`, e);
+      };
+      
+      // Try to fetch the resource first to see response details
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          statusDiv.innerHTML += `<p class="error">HTTP Error: ${response.status} ${response.statusText}</p>`;
+          return;
+        }
+      } catch (err) {
+        statusDiv.innerHTML += `<p class="error">Fetch Error: ${err.message}</p>`;
+      }
+      
+      img.src = url;
+    }
+
+    // Get all files in the uploads directory
+    async function getUploadsList() {
+      try {
+        const response = await fetch('/debug/files-json');
+        if (!response.ok) {
+          console.error('Failed to fetch uploads list');
+          return;
+        }
+        
+        const data = await response.json();
+        
+        // Test each file
+        data.files.forEach(file => {
+          testImage(`/uploads/${file.name}`, `File from uploads: ${file.name}`);
+        });
+        
+        // Also test a few variations of paths
+        if (data.files.length > 0) {
+          const firstFile = data.files[0].name;
+          testImage(`/uploads/${firstFile}?nocache=${Date.now()}`, 'With cache busting');
+        }
+        
+      } catch (err) {
+        console.error('Error loading file list:', err);
+      }
+    }
+
+    // Run tests
+    window.onload = () => {
+      // Test placeholder image first
+      testImage('https://via.placeholder.com/300x200?text=Test', 'External placeholder image');
+      
+      // Get and test upload files
+      getUploadsList();
+    };
+  </script>
+</body>
+</html>

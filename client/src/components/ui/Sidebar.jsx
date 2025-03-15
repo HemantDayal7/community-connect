@@ -16,11 +16,20 @@ export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
 
-  // Highlight the active link
-  const isActive = (path) =>
-    location.pathname === path
+  // Update the isActive function to handle both root and /home paths:
+  const isActive = (path) => {
+    // Special case for home route
+    if (path === "/" || path === "/home") {
+      return location.pathname === "/" || location.pathname === "/home"
+        ? "flex items-center text-[#69C143] font-medium"
+        : "flex items-center text-gray-700 hover:text-[#69C143] transition-colors";
+    }
+    
+    // Normal case for other routes
+    return location.pathname === path
       ? "flex items-center text-[#69C143] font-medium"
       : "flex items-center text-gray-700 hover:text-[#69C143] transition-colors";
+  };
 
   return (
     <>
@@ -47,7 +56,7 @@ export default function Sidebar() {
 
 
           {/* Now the Home link appears below the logo */}
-          <Link to="/home" className={isActive("/home")}>
+          <Link to="/" className={isActive("/")}>
             <HomeIcon className="w-5 h-5 mr-3" />
             <span>Home</span>
           </Link>

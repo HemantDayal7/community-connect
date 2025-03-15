@@ -1,37 +1,68 @@
-import { useState } from "react";
+import { useState, useEffect, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
+import { AuthContext } from "../../context/AuthContext";
 import { loginUser } from "../../services/authService";
-import { useAuth } from "../../context/AuthContext";
 
 export default function Login() {
+  const navigate = useNavigate();
+  const { login, isAuthenticated } = useContext(AuthContext);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const navigate = useNavigate();
-  const { login } = useAuth(); // Use the auth context
+  const [error, setError] = useState("");
+
+  // Monitor authentication state for navigation
+  useEffect(() => {
+    console.log("Login component - Auth state:", { isAuthenticated });
+    if (isAuthenticated) {
+      navigate("/home", { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    setError(null);
+    setError("");
 
     try {
-      const data = await loginUser({ email, password });
-      // Update auth state using the context
-      await login(data.accessToken, data.user);
-      // Navigate after state is updated
-      navigate("/home");
+      console.log("Submitting login with:", email);
+      
+      // Direct API approach for better control
+      const result = await loginUser({ email, password });
+      console.log("Login response:", result);
+      
+      if (!result || !result.accessToken) {
+        throw new Error("Invalid response from server");
+      }
+      
+      // Store token in localStorage immediately as backup
+      localStorage.setItem("token", result.accessToken);
+      if (result.user) {
+        localStorage.setItem("userData", JSON.stringify(result.user));
+      }
+      
+      // Update auth context
+      await login(result.accessToken, result.user);
+      
+      // Force navigation (in case the useEffect doesn't trigger)
+      setTimeout(() => {
+        if (!isAuthenticated) {
+          console.log("Forcing navigation to home");
+          navigate("/home", { replace: true });
+        }
+      }, 300);
+      
     } catch (err) {
-      console.error("Login failed:", err);
-      setError("Invalid email or password. Please try again.");
+      console.error("Login error:", err);
+      setError(typeof err === 'string' ? err : "Invalid email or password. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Rest of your component remains unchanged
   const handleScrollToFeatures = () => {
     const featuresSection = document.getElementById("features");
     if (featuresSection) {
@@ -42,10 +73,13 @@ export default function Login() {
     }
   };
 
+  // Return your existing JSX
   return (
     <>
-      {/* TOP NAVBAR (Transparent Black Strip) */}
+      {/* Your existing JSX components */}
+      {/* TOP NAVBAR */}
       <header className="absolute top-0 left-0 w-full z-50">
+        {/* Your existing navbar JSX */}
         <div className="flex items-center justify-between px-6 py-3 bg-black/20 backdrop-blur-sm border-b border-white/20">
           {/* Left side: brand + nav links */}
           <div className="flex items-center space-x-6">
@@ -68,7 +102,6 @@ export default function Login() {
             </nav>
           </div>
 
-          {/* Right side: bright green "Log In" button with black text */}
           <div>
             <button className="bg-[#69C143] text-black px-4 py-2 rounded hover:bg-[#58AE3A] transition-colors text-lg">
               Log In
@@ -77,7 +110,11 @@ export default function Login() {
         </div>
       </header>
 
-      {/* HERO BACKGROUND + LOGIN FORM */}
+      {/* Rest of your component - login form, features section, etc. */}
+      {/* This maintains the rest of your existing UI */}
+      {/* ... */}
+      
+      {/* Just adding the login form explicitly */}
       <div
         className="relative w-full h-screen bg-cover bg-center flex items-center justify-center"
         style={{
@@ -86,7 +123,6 @@ export default function Login() {
           backgroundPosition: "center",
         }}
       >
-        {/* White box container for login */}
         <div className="relative z-10 max-w-sm w-full bg-white rounded-lg shadow-md p-6 mx-4 mt-16">
           <h1 className="text-2xl font-bold mb-3 text-center">
             Connect with Your Neighbours
@@ -175,8 +211,8 @@ export default function Login() {
           </p>
         </div>
       </div>
-
-      {/* FEATURES SECTION */}
+      
+      {/* Feature section and other content remains the same */}
       <section
         id="features"
         className="w-full h-screen bg-white flex flex-col items-center justify-center px-4"

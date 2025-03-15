@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";
-import { UserCircleIcon, BellIcon } from "@heroicons/react/24/outline";
+import { UserCircleIcon, BellIcon, StarIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "../../context/AuthContext";
 
 export default function Navbar({ userData }) {
@@ -66,14 +66,17 @@ export default function Navbar({ userData }) {
             </div>
 
             {showDropdown && (
-              <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-gray-800 rounded-md shadow-lg py-2 px-3 z-50">
-                {userData?.trustScore !== undefined && (
-                  <div className="py-2">
-                    <p className="text-sm text-gray-700 dark:text-gray-200">
-                      <span className="font-medium">Trust Score:</span> {userData.trustScore}
-                    </p>
-                  </div>
-                )}
+              <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-gray-800 shadow-lg rounded-lg p-3">
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  <strong>Trust Score:</strong>{" "}
+                  <span className="flex items-center">
+                    <StarIcon className="h-4 w-4 text-yellow-500 mr-1" />
+                    {userData?.trustScore?.toFixed(1) || "5.0"}
+                    <span className="text-xs text-gray-500 ml-1">
+                      ({userData?.totalReviews || 0} reviews)
+                    </span>
+                  </span>
+                </p>
                 {userData?.email && (
                   <div className="py-2">
                     <p className="text-sm text-gray-700 dark:text-gray-200 break-all">

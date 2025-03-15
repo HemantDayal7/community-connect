@@ -1,34 +1,38 @@
-import express from "express";
-import { body, param } from "express-validator";
-import { protect } from "../../middleware/authMiddleware.js";
+import express from 'express';
+import { protect } from '../../middleware/authMiddleware.js';
+// FIXED: Use correct path for upload middleware
+import upload from '../../middleware/fileUpload.js';
 import {
   createResource,
   getAllResources,
   getResourceById,
   updateResource,
   deleteResource,
-  borrowResource,
-} from "../../controllers/resource/resourceController.js";
+  updateResourceStatus,
+  returnResource
+} from '../../controllers/resource/resourceController.js';
+import {
+  createBorrowRequest,
+  getMyBorrowRequests,
+  updateBorrowRequest
+} from '../../controllers/resource/borrowRequestController.js';
 
 const router = express.Router();
 
-// ✅ Validation Middleware
-const validateResource = [
-  body("title").notEmpty().withMessage("Title is required"),
-  body("description").notEmpty().withMessage("Description is required"),
-  body("availability").isIn(["available", "borrowed"]).withMessage("Availability must be 'available' or 'borrowed'"),
-  body("category").notEmpty().withMessage("Category is required"),
-  body("location").notEmpty().withMessage("Location is required"),
-];
+// Public routes
+router.get('/', getAllResources);
 
-const validateResourceId = [param("id").isMongoId().withMessage("Invalid Resource ID format")];
+// FIXED: Specific routes BEFORE dynamic routes with ID parameters
+router.post('/borrow-request', protect, createBorrowRequest);
+router.get('/borrow-requests', protect, getMyBorrowRequests);
+router.put('/borrow-request/:id', protect, updateBorrowRequest);
+router.put('/return/:id', protect, returnResource);
 
-// ✅ Routes
-router.post("/", protect, validateResource, createResource);
-router.get("/", getAllResources);
-router.get("/:id", validateResourceId, getResourceById);
-router.put("/:id", protect, validateResourceId, updateResource);
-router.delete("/:id", protect, validateResourceId, deleteResource);
-router.post("/borrow", protect, borrowResource);
+// Dynamic routes with ID parameters AFTER specific routes
+router.get('/:id', getResourceById);
+router.post('/', protect, upload.single('image'), createResource);
+router.put('/:id', protect, updateResource);
+router.delete('/:id', protect, deleteResource);
+router.put('/:id/status', protect, updateResourceStatus);
 
 export default router;

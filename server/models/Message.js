@@ -8,42 +8,38 @@ const messageSchema = new mongoose.Schema(
       required: true, 
       index: true 
     }, 
-    receiverId: { 
+    recipientId: { 
       type: mongoose.Schema.Types.ObjectId, 
       ref: "User", 
       required: true, 
       index: true 
     }, 
     content: { type: String, required: true },
-    isDeleted: { type: Boolean, default: false },
-    isRead: { type: Boolean, default: false }, // ✅ New field to track read status
-    messageType: { 
-      type: String, 
-      enum: ["text", "image", "video", "file"], 
-      default: "text" 
-    }, // ✅ New field to support different message types
+    read: { type: Boolean, default: false },
+    resourceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Resource"
+    }
   },
   { timestamps: true }
 );
 
-// ✅ Ensure messages are indexed properly for fast queries
-messageSchema.index({ senderId: 1, receiverId: 1, createdAt: -1 });
+// Add this index to improve performance on conversation queries
+messageSchema.index({ senderId: 1, recipientId: 1, createdAt: -1 });
 
-// ✅ Static method to get conversation history
-messageSchema.statics.getMessagesBetweenUsers = async function (user1, user2) {
+// Helper method to get conversation between two users
+messageSchema.statics.getConversation = async function(user1Id, user2Id) {
   return this.find({
     $or: [
-      { senderId: user1, receiverId: user2 },
-      { senderId: user2, receiverId: user1 }
-    ],
-    isDeleted: false
-  }).sort({ createdAt: 1 });
+      { senderId: user1Id, recipientId: user2Id },
+      { senderId: user2Id, recipientId: user1Id }
+    ]
+  })
+  .sort({ createdAt: 1 })
+  .populate("senderId", "name avatar")
+  .populate("recipientId", "name avatar")
+  .populate("resourceId", "title image");
 };
 
-// ✅ Method to mark messages as read
-messageSchema.methods.markAsRead = async function () {
-  this.isRead = true;
-  return this.save();
-};
-
-export default mongoose.model("Message", messageSchema);
+const Message = mongoose.model("Message", messageSchema);
+export default Message;

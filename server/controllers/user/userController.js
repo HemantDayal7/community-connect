@@ -84,7 +84,8 @@ const getUserProfile = async (req, res) => {
       return res.status(401).json({ msg: "Unauthorized: No user found in request" });
     }
 
-    const user = await User.findById(req.user.id).select("-password");
+    // Fix: Use _id instead of id for consistency
+    const user = await User.findById(req.user._id).select("-password");
 
     if (!user || user.isDeleted) {
       return res.status(404).json({ msg: "User not found" });

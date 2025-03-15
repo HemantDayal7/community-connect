@@ -6,7 +6,16 @@ const UserSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true }, // ✅ NO need for extra index
     password: { type: String, required: true },
     role: { type: String, enum: ["user", "admin"], default: "user" },
-    trustScore: { type: Number, default: 5 }, // Reputation system
+    trustScore: { 
+      type: Number, 
+      default: 5.0, 
+      min: 1, 
+      max: 5 
+    }, // Reputation system
+    totalReviews: { 
+      type: Number, 
+      default: 0 
+    },
     reviews: [
       {
         reviewerId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },

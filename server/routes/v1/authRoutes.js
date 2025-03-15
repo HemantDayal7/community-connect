@@ -1,42 +1,17 @@
 import express from "express";
-import { body } from "express-validator";
-import { protect } from "../../middleware/authMiddleware.js";
-import authController from "../../controllers/auth/authController.js";
+import * as authController from "../../controllers/auth/authController.js";
+import { protect } from "../../middleware/authMiddleware.js"; // Fixed import
 
 const router = express.Router();
 
-// ✅ Validation Middleware
-const validateRegister = [
-  body("name").notEmpty().withMessage("Name is required"),
-  body("email").isEmail().withMessage("Invalid email format"),
-  body("password")
-    .isLength({ min: 6 })
-    .withMessage("Password must be at least 6 characters long"),
-];
-
-const validateLogin = [
-  body("email").isEmail().withMessage("Invalid email format"),
-  body("password").notEmpty().withMessage("Password is required"),
-];
-
-// @route    POST /api/v1/auth/register
-// @desc     Register a new user
-router.post("/register", validateRegister, authController.registerUser);
-
-// @route    POST /api/v1/auth/login
-// @desc     Authenticate user & get token
-router.post("/login", validateLogin, authController.loginUser);
-
-// @route    GET /api/v1/auth/me
-// @desc     Get logged-in user details (Requires Authentication)
-router.get("/me", protect, authController.getProfile);
-
-// @route    PUT /api/v1/auth/me
-// @desc     Update user profile (Requires Authentication)
-router.put("/me", protect, authController.updateProfile);
-
-// @route    POST /api/v1/auth/refresh-token
-// @desc     Refresh expired access token
+// Public routes
+router.post("/register", authController.registerUser);
+router.post("/login", authController.loginUser);
 router.post("/refresh-token", authController.refreshToken);
+router.post("/logout", authController.logoutUser);
+
+// Protected routes
+router.get("/me", protect, authController.getProfile); // Using protect instead of auth
+router.put("/profile", protect, authController.updateProfile); // Using protect instead of auth
 
 export default router;

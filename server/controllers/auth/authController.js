@@ -114,10 +114,10 @@ export const loginUser = async (req, res, next) => {
 
     // ✅ Return Success Response
     res.json({
-      _id: user.id,
+      _id: user._id || user.id, // Use _id consistently
       name: user.name,
       email: user.email,
-      accessToken,
+      accessToken // Return as accessToken
     });
   } catch (error) {
     next(error);
@@ -127,7 +127,9 @@ export const loginUser = async (req, res, next) => {
 // ✅ Refresh Access Token
 export const refreshToken = async (req, res, next) => {
   try {
-    const refreshToken = req.cookies.refreshToken;
+    // Get token from cookies OR request body
+    const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
+    
     if (!refreshToken) {
       return res.status(403).json({ message: "Refresh Token Required" });
     }
@@ -139,7 +141,9 @@ export const refreshToken = async (req, res, next) => {
         return next(error);
       }
 
-      res.json({ accessToken: generateAccessToken(decoded.id) });
+      // Generate and return a new access token
+      const accessToken = generateAccessToken(decoded.id);
+      res.json({ accessToken });
     });
   } catch (error) {
     next(error);
@@ -198,8 +202,15 @@ export const updateProfile = async (req, res, next) => {
 // ✅ Logout User
 export const logoutUser = async (req, res, next) => {
   try {
-    res.cookie("refreshToken", "", { expires: new Date(0) }); // ✅ Clear cookie
-    res.json({ message: "Logout successful" });
+    // Clear the refresh token cookie
+    res.cookie("refreshToken", "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "Strict",
+      expires: new Date(0) // Expire immediately
+    });
+    
+    res.status(200).json({ message: "Logged out successfully" });
   } catch (error) {
     next(error);
   }
