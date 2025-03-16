@@ -201,6 +201,39 @@ const getAllUsers = async (req, res) => {
   }
 };
 
+// No changes needed here - just confirming the implementation is correct
+
+const searchUsers = async (req, res) => {
+  console.log("🔍 Search query received:", req.query);
+  try {
+    const { search } = req.query;
+    
+    if (!search || search.trim().length < 2) {
+      console.log("⚠️ Search term too short or missing");
+      return res.json([]);
+    }
+    
+    console.log(`🔍 Searching for users with term: "${search}"`);
+    
+    // Find users that match the search term (case insensitive)
+    const users = await User.find({
+      $or: [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } }
+      ],
+      _id: { $ne: req.user._id }
+    })
+    .select("_id name email profilePicture")
+    .limit(10);
+    
+    console.log(`✅ Found ${users.length} matching users`);
+    return res.status(200).json(users);
+  } catch (error) {
+    console.error("❌ Error searching users:", error);
+    return res.status(500).json({ message: "Server error while searching users" });
+  }
+};
+
 // ✅ Export all functions once at the bottom
 export {
   registerUser,
@@ -210,4 +243,5 @@ export {
   getUserById,
   deleteUser,
   getAllUsers,
+  searchUsers,
 };

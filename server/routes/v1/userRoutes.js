@@ -9,6 +9,7 @@ import {
   getAllUsers,
   getUserById,
   deleteUser,
+  searchUsers,
 } from "../../controllers/user/userController.js";
 
 const router = express.Router();
@@ -75,6 +76,13 @@ router.put("/profile", protect, validateUpdateProfile, updateUserProfile);
  * @access   Private (Requires Authentication)
  */
 router.get("/", protect, getAllUsers);
+
+/**
+ * @route    GET /api/v1/users/search
+ * @desc     Search users
+ * @access   Private (Requires Authentication)
+ */
+router.get("/search", protect, searchUsers);
 
 /**
  * @route    GET /api/v1/users/:id
