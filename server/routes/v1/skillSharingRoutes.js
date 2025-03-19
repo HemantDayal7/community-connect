@@ -7,6 +7,7 @@ import {
   getSkillSharingById,
   updateSkillSharing,
   deleteSkillSharing,
+  getSkillRequests,
 } from "../../controllers/skill/skillSharingController.js";
 
 const router = express.Router();
@@ -19,6 +20,7 @@ const validateSkillSharing = [
   body("availability")
     .isIn(["available", "unavailable"])
     .withMessage("Availability must be 'available' or 'unavailable'"),
+  body("category").optional().isString().withMessage("Category must be a string"),
 ];
 
 const validateSkillId = [
@@ -39,5 +41,8 @@ router.put("/:id", protect, validateSkillId, updateSkillSharing);
 
 // ✅ Delete a skill listing (Only owner can delete)
 router.delete("/:id", protect, validateSkillId, deleteSkillSharing);
+
+// ✅ Get skill requests for a specific skill listing
+router.get("/:id/requests", protect, validateSkillId, getSkillRequests);
 
 export default router;

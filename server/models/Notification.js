@@ -20,7 +20,12 @@ const notificationSchema = new mongoose.Schema(
         "resource_borrowed",
         "borrow_request",
         "request_approved",
-        "request_declined"
+        "request_declined",
+        "skill_request_response",
+        "skill_request",
+        "event_rsvp",
+        "event_update",
+        "event_canceled"
       ], 
       required: true 
     },
@@ -32,18 +37,16 @@ const notificationSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Resource",
     },
+    eventId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Event",
+    },
     actionBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-    },
-    createdAt: {
-      type: Date,
-      default: Date.now,
     },
   },
   { timestamps: true }
 );
 
-const Notification = mongoose.model("Notification", notificationSchema);
-
-export default Notification;
+export default mongoose.model("Notification", notificationSchema);

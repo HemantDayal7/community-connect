@@ -7,17 +7,19 @@ const seedSkills = async () => {
     const skills = [
       {
         userId: "603d2fbdaf250b1d98a2b0e9",
-        skillName: "Web Development",
+        title: "Web Development",
         description: "Can teach React and Node.js.",
         availability: "available",
         location: "Remote",
+        category: "Technology" // Add category 
       },
       {
         userId: "603d2fbdaf250b1d98a2b0ea",
-        skillName: "Guitar Lessons",
+        title: "Guitar Lessons",
         description: "Available for beginner lessons.",
         availability: "available",
         location: "Los Angeles, CA",
+        category: "Music" // Add category
       },
     ];
 

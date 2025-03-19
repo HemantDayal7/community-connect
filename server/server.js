@@ -29,6 +29,8 @@ import socketSetup from "./sockets/chatSocket.js"; // Socket.IO handler
 import Message from "./models/Message.js";
 import Notification from "./models/Notification.js";
 import debugRoutes from './routes/debug.js';
+import skillRequestRoutes from "./routes/v1/skillRequestRoutes.js";
+import skillReviewRoutes from "./routes/v1/skillReviewRoutes.js";
 
 // Helper function: verify JWT token
 const verifyToken = (token) => {
@@ -103,23 +105,31 @@ const isDevelopment = process.env.NODE_ENV !== "production";
 
 // Socket authentication middleware
 io.use((socket, next) => {
-  if (isDevelopment && socket.handshake.query.dev === "true") {
+  // Allow development connections with a special query param
+  if (process.env.NODE_ENV !== 'production' && socket.handshake.query?.dev === 'true') {
     console.log("🔧 Development connection accepted:", socket.id);
+    socket.user = { id: 'dev-user' }; // Set a placeholder user
     return next();
   }
-  const token = socket.handshake.auth.token;
+  
+  // Check for token in socket.handshake.auth
+  const token = socket.handshake.auth?.token;
+  
   if (!token) {
     console.log("❌ Socket connection rejected: No token provided");
     return next(new Error("Authentication required"));
   }
+  
   try {
     const userData = verifyToken(token);
     if (!userData) {
       console.log("❌ Socket connection rejected: Invalid token");
       return next(new Error("Invalid authentication"));
     }
+    
+    // Set user data on socket for future reference
     socket.user = userData;
-    console.log(`✅ Authenticated socket connection: ${userData.name || userData._id}`);
+    console.log(`✅ Authenticated socket connection: ${userData.name || userData.id || userData._id}`);
     next();
   } catch (error) {
     console.log("❌ Socket connection rejected:", error.message);
@@ -227,6 +237,21 @@ app.use("/api/v1/reviews", reviewsLimiter);
 // Setup API Documentation (Swagger)
 setupSwagger(app);
 
+// Add before your routes registration
+app.use((req, res, next) => {
+  // Store original res.json method
+  const originalJson = res.json;
+  
+  // Override res.json to log responses
+  res.json = function(body) {
+    console.log(`Response to ${req.method} ${req.originalUrl}:`, 
+      JSON.stringify(body).substring(0, 200) + "...");
+    return originalJson.call(this, body);
+  };
+  
+  next();
+});
+
 // Import API Routes
 import authRoutes from "./routes/v1/authRoutes.js";
 import userRoutes from "./routes/v1/userRoutes.js";
@@ -256,6 +281,8 @@ app.use(`${API_PREFIX}/notifications`, notificationRoutes);
 app.use(`${API_PREFIX}/messages`, messageRoutes);
 app.use(`${API_PREFIX}/dashboard`, dashboardRoutes);
 app.use('/debug', debugRoutes);
+app.use("/api/v1/skillrequests", skillRequestRoutes);
+app.use("/api/v1/skillreviews", skillReviewRoutes);
 
 // Default API Route
 app.get(API_PREFIX, (req, res) => {
