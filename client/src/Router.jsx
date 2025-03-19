@@ -4,8 +4,8 @@ import PropTypes from "prop-types";
 import { AuthProvider, AuthContext } from "./context/AuthContext";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import socket, { connectSocket } from "./services/socket";
 import ErrorBoundary from './components/ErrorBoundary';
+import { useSocket } from './context/SocketContext';
 
 // Layout
 import MainLayout from "./components/layout/MainLayout";
@@ -22,6 +22,7 @@ import SkillSharing from "./pages/SkillSharing";
 import HelpRequests from "./pages/HelpRequests";
 import Messages from "./pages/Messages";
 import NotFound from "./pages/NotFound";
+import SkillRequests from "./pages/SkillRequests";
 
 // Protected Route Component
 function ProtectedRoute({ children }) {
@@ -67,6 +68,7 @@ export default function AppRouter() {
 // Main Routing Component
 function AppRoutes() {
   const { userData, isAuthenticated } = useContext(AuthContext);
+  const { socket } = useSocket(); // Use the socket context
   
   // Socket connection and notification management
   useEffect(() => {
@@ -77,11 +79,6 @@ function AppRoutes() {
     if (isAuthenticated && userData?._id) {
       try {
         console.log("Setting up socket with user:", userData._id);
-        
-        // Connect socket if needed
-        if (!socket.connected) {
-          connectSocket();
-        }
         
         // Setup socket event listeners
         const handleConnect = () => {
@@ -226,6 +223,18 @@ function AppRoutes() {
         <Route path="/messages" element={
           <ProtectedRoute>
             <MainLayout userData={userData}><Messages /></MainLayout>
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/skill-requests" element={
+          <ProtectedRoute>
+            <SkillRequests />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/skillsharing" element={
+          <ProtectedRoute>
+            <MainLayout userData={userData}><SkillSharing /></MainLayout>
           </ProtectedRoute>
         } />
         

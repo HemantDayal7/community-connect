@@ -64,7 +64,7 @@ export default function Sidebar() {
             <ArchiveBoxIcon className="w-5 h-5 mr-3" />
             <span>Resource Sharing</span>
           </Link>
-          <Link to="/skills" className={isActive("/skills")}>
+          <Link to="/skillsharing" className={isActive("/skillsharing")}>
             <AcademicCapIcon className="w-5 h-5 mr-3" />
             <span>Skill Exchange</span>
           </Link>

@@ -3,6 +3,8 @@ import { useLocation } from "react-router-dom";
 import API from "../services/api";
 import { AuthContext } from "../context/AuthContext";
 import { format } from "date-fns";
+import UserSearchModal from "../components/messaging/UserSearchModal";
+import { PlusIcon, CheckIcon } from "@heroicons/react/24/outline";
 
 export default function Messages() {
   const location = useLocation();
@@ -16,6 +18,7 @@ export default function Messages() {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [initialMessageSent, setInitialMessageSent] = useState(false);
+  const [showNewChatModal, setShowNewChatModal] = useState(false);
   
   // Separate loading states
   const [convLoading, setConvLoading] = useState(false);
@@ -109,11 +112,14 @@ export default function Messages() {
   // Parse query parameters on component mount
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
-    const recipientId = searchParams.get("to");
+    // Check both possible parameter names for compatibility
+    const recipientId = searchParams.get("with") || searchParams.get("to");
     const resourceId = searchParams.get("resource");
     const resourceTitle = searchParams.get("resourceTitle");
+    const contextType = searchParams.get("contextType");
+    const contextId = searchParams.get("contextId");
 
-    console.log("Query params:", { recipientId, resourceId, resourceTitle });
+    console.log("Query params:", { recipientId, resourceId, resourceTitle, contextType, contextId });
 
     if (recipientId) {
       const fetchRecipientDetails = async () => {
@@ -135,9 +141,13 @@ export default function Messages() {
           setActiveRecipient(recipientData);
           console.log("Recipient data loaded:", recipientData);
           
-          // Set initial message only if this is a new conversation
+          // Set initial message only if this is a new conversation and context is provided
           if (resourceTitle) {
             const initialMsg = `Hi! I'm interested in your "${resourceTitle}"`;
+            setNewMessage(initialMsg);
+          } else if (contextType === "skill_request") {
+            // Add custom initial message for skill requests
+            const initialMsg = "Hi! I'm responding to your skill request. When would you like to schedule this?";
             setNewMessage(initialMsg);
           }
           
@@ -241,6 +251,28 @@ export default function Messages() {
     }
   };
 
+  const handleSelectUser = async (user) => {
+    // Close the modal
+    setShowNewChatModal(false);
+    
+    // Set the selected user as active recipient
+    setActiveRecipient(user);
+    
+    // Clear resource context as this is a direct message
+    setResourceContext(null);
+    
+    // Clear any pre-filled message
+    setNewMessage("");
+    
+    try {
+      // Fetch existing messages if any
+      await fetchMessages(user._id);
+    } catch (error) {
+      console.error("Error starting conversation:", error);
+      setMsgError("Failed to load conversation");
+    }
+  };
+
   const formatTime = (dateString) => {
     try {
       return format(new Date(dateString), "h:mm a");
@@ -260,17 +292,35 @@ export default function Messages() {
       <h1 className="text-2xl font-bold mb-4">Messages</h1>
       
       <div className="flex flex-col md:flex-row h-[calc(100vh-200px)] gap-4">
+        {/* Show the search modal when needed */}
+        {showNewChatModal && (
+          <UserSearchModal
+            onClose={() => setShowNewChatModal(false)}
+            onSelectUser={handleSelectUser}
+          />
+        )}
+      
         {/* Conversations Sidebar */}
         <div className="w-full md:w-1/4 bg-white rounded-lg shadow p-4 overflow-y-auto">
           <div className="flex justify-between items-center mb-4">
             <h2 className="font-semibold">Conversations</h2>
-            <button 
-              onClick={fetchConversations}
-              className="text-xs text-blue-500 hover:text-blue-700"
-              disabled={convLoading}
-            >
-              {convLoading ? 'Refreshing...' : 'Refresh'}
-            </button>
+            <div className="flex space-x-2">
+              <button 
+                onClick={() => setShowNewChatModal(true)}
+                className="bg-blue-500 text-white text-xs px-3 py-1 rounded hover:bg-blue-600 flex items-center"
+              >
+                <PlusIcon className="h-3 w-3 mr-1" />
+                New Chat
+              </button>
+              
+              <button 
+                onClick={fetchConversations}
+                className="text-xs text-blue-500 hover:text-blue-700"
+                disabled={convLoading}
+              >
+                {convLoading ? 'Refreshing...' : 'Refresh'}
+              </button>
+            </div>
           </div>
           
           {convError && (
@@ -400,8 +450,13 @@ export default function Messages() {
                               </div>
                             )}
                             <div className="break-words">{msg.content}</div>
-                            <div className={`text-xs mt-1 ${isOwnMessage ? "text-blue-200" : "text-gray-500"} text-right`}>
-                              {formatTime(msg.createdAt)}
+                            <div className={`text-xs mt-1 ${isOwnMessage ? "text-blue-200" : "text-gray-500"} text-right flex items-center justify-end space-x-1`}>
+                              <span>{formatTime(msg.createdAt)}</span>
+                              
+                              {/* Add read status indicator - only show for your messages */}
+                              {isOwnMessage && msg.read && (
+                                <CheckIcon className="h-3 w-3 text-blue-200" />
+                              )}
                             </div>
                           </div>
                         </div>

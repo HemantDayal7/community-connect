@@ -555,19 +555,39 @@ const Resources = () => {
 
   // Filter resources based on search query and selected category
   const filteredResources = resources.filter((resource) => {
+    // Debug log for search (can be commented out after fixing)
+    if (searchQuery.trim() !== "") {
+      console.log("Searching for:", searchQuery);
+      console.log("Resource:", {
+        title: resource.title, 
+        description: resource.description,
+        location: resource.location,
+        matches: {
+          title: resource.title?.toLowerCase().includes(searchQuery.toLowerCase()),
+          description: resource.description?.toLowerCase().includes(searchQuery.toLowerCase()),
+          location: resource.location?.toLowerCase().includes(searchQuery.toLowerCase())
+        }
+      });
+    }
+
     const matchesQuery =
       searchQuery.trim() === "" ||
-      resource.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      resource.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (resource.location &&
-        resource.location.toLowerCase().includes(searchQuery.toLowerCase()));
+      (resource.title && resource.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (resource.description && resource.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (resource.location && resource.location.toLowerCase().includes(searchQuery.toLowerCase()));
+    
     const matchesCategory =
       filterCategory === "" || resource.category === filterCategory;
+    
     return matchesQuery && matchesCategory;
   });
 
   // Separate resources owned by the user vs. community resources
-  const otherResources = filteredResources.filter(
+  const myResourcesFiltered = filteredResources.filter(
+    (r) => r.ownerId?._id === userData?._id
+  );
+
+  const otherResourcesFiltered = filteredResources.filter(
     (r) => r.ownerId?._id !== userData?._id
   );
 
@@ -577,12 +597,12 @@ const Resources = () => {
       loading,
       resourcesCount: resources?.length || 0,
       myResourcesCount: myResources?.length || 0,
-      otherResourcesCount: otherResources?.length || 0,
+      otherResourcesCount: otherResourcesFiltered?.length || 0,
       hasUserData: !!userData,
       searchQuery,
       filterCategory,
     });
-  }, [loading, resources, myResources, otherResources, userData, searchQuery, filterCategory]);
+  }, [loading, resources, myResources, otherResourcesFiltered, userData, searchQuery, filterCategory]);
 
   return (
     <div className="p-6 bg-white shadow-md rounded-lg">
@@ -718,17 +738,17 @@ const Resources = () => {
       )}
 
       {/* My Resources Section */}
-      {myResources.length > 0 && (
+      {(myResourcesFiltered.length > 0 || myResources.length > 0) && (
         <div className="mb-8">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-medium">My Resources</h2>
             <p className="text-sm text-gray-500">
-              {myResources.length}{" "}
-              {myResources.length === 1 ? "resource" : "resources"}
+              {myResourcesFiltered.length}{" "}
+              {myResourcesFiltered.length === 1 ? "resource" : "resources"}
             </p>
           </div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {myResources.map((resource) => (
+            {myResourcesFiltered.map((resource) => (
               <ResourceCard
                 key={resource._id}
                 resource={resource}
@@ -748,36 +768,35 @@ const Resources = () => {
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-medium">Community Resources</h2>
           <p className="text-sm text-gray-500">
-            {otherResources.length}{" "}
-            {otherResources.length === 1 ? "resource" : "resources"}
+            {otherResourcesFiltered.length}{" "}
+            {otherResourcesFiltered.length === 1 ? "resource" : "resources"}
           </p>
         </div>
-        <div>
-          {loading ? (
-            <div className="flex justify-center my-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#69C143]"></div>
+        {/* Use otherResourcesFiltered instead of otherResources */}
+        {loading ? (
+          <div className="flex justify-center my-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#69C143]"></div>
+          </div>
+        ) : otherResourcesFiltered && Array.isArray(otherResourcesFiltered) ? (
+          otherResourcesFiltered.length > 0 ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {otherResourcesFiltered.map((resource) => (
+                <ResourceCard
+                  key={resource._id}
+                  resource={resource}
+                  userData={userData}
+                  onUpdate={handleToggleStatus}
+                  onOpenChat={handleOpenChat}
+                  onShowReviewModal={handleShowReviewModal}
+                />
+              ))}
             </div>
-          ) : otherResources && Array.isArray(otherResources) ? (
-            otherResources.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {otherResources.map((resource) => (
-                  <ResourceCard
-                    key={resource._id}
-                    resource={resource}
-                    userData={userData}
-                    onUpdate={handleToggleStatus}
-                    onOpenChat={handleOpenChat}
-                    onShowReviewModal={handleShowReviewModal}
-                  />
-                ))}
-              </div>
-            ) : (
-              <p>No resources found</p>
-            )
           ) : (
-            <p>Loading resources...</p>
-          )}
-        </div>
+            <p>No resources found matching your search criteria</p>
+          )
+        ) : (
+          <p>Loading resources...</p>
+        )}
       </div>
 
       {showAddModal && (

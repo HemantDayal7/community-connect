@@ -6,14 +6,17 @@ import Navbar from "../ui/Navbar";
 export default function MainLayout({ children, userData }) {
   return (
     <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
-      {/* Navbar pinned top (only bell + profile icons) */}
+      {/* Top navbar */}
       <Navbar userData={userData} />
 
-      {/* Sidebar pinned left (brand “Community Connect” at top, then Home, etc.) */}
+      {/* Fixed sidebar on the left */}
       <Sidebar />
 
-      {/* Main content offset by top-16, left-64 */}
-      <div className="pt-16 ml-64 p-6">
+      {/* 
+        Shift main content to the right on md+ screens (so it’s not behind the sidebar).
+        On small screens, there's no left margin so the sidebar can slide over the page.
+      */}
+      <div className="pt-16 md:ml-64">
         {children}
       </div>
     </div>
