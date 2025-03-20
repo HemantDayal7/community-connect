@@ -1,41 +1,49 @@
 import express from "express";
 import { body, param } from "express-validator";
-import { protect } from "../../middleware/authMiddleware.js"; 
+import { protect } from "../../middleware/authMiddleware.js";
 import {
-  createHelpRequest,
   getAllHelpRequests,
+  createHelpRequest,
   getHelpRequestById,
   updateHelpRequest,
   deleteHelpRequest,
-} from "../../controllers/requesthelp/helpRequestController.js"; 
+  offerHelp,
+  completeHelpRequest,
+  getMyHelpRequests
+} from "../../controllers/helpRequest/helpRequestController.js";
 
 const router = express.Router();
 
-// ✅ Validation Middleware
+// Validation middleware for creating/updating help requests
 const validateHelpRequest = [
-  body("title").notEmpty().withMessage("Title is required"),
-  body("description").notEmpty().withMessage("Description is required"),
-  body("category").notEmpty().withMessage("Category is required"),
-  body("location").notEmpty().withMessage("Location is required"),
+  body("title").trim().notEmpty().withMessage("Title is required"),
+  body("description").trim().notEmpty().withMessage("Description is required"),
+  body("category").isIn(["Childcare", "Repairs", "Home Assistance", "Medical", "Transportation", "Groceries", "Other"])
+    .withMessage("Invalid category"),
+  body("location").trim().notEmpty().withMessage("Location is required"),
+  body("urgency").optional().isIn(["low", "medium", "high"])
+    .withMessage("Urgency must be low, medium, or high")
 ];
 
-const validateHelpRequestId = [
-  param("id").isMongoId().withMessage("Invalid Help Request ID format"),
+// Validation middleware for ID parameters
+const validateRequestId = [
+  param("id").isMongoId().withMessage("Invalid help request ID format")
 ];
 
-// ✅ Get all help requests (Public)
+// Public routes
 router.get("/", getAllHelpRequests);
+router.get("/:id", validateRequestId, getHelpRequestById);
 
-// ✅ Create a new help request (Requires authentication)
+// Protected routes that require authentication
 router.post("/", protect, validateHelpRequest, createHelpRequest);
+router.put("/:id", protect, validateRequestId, validateHelpRequest, updateHelpRequest);
+router.delete("/:id", protect, validateRequestId, deleteHelpRequest);
 
-// ✅ Get a single help request by ID (Public)
-router.get("/:id", validateHelpRequestId, getHelpRequestById);
+// Special actions
+router.put("/:id/offer-help", protect, validateRequestId, offerHelp);
+router.put("/:id/complete", protect, validateRequestId, completeHelpRequest);
 
-// ✅ Update a help request (Only the requester can update)
-router.put("/:id", protect, validateHelpRequestId, updateHelpRequest);
-
-// ✅ Soft delete a help request (Only the requester can delete)
-router.delete("/:id", protect, validateHelpRequestId, deleteHelpRequest);
+// User's own requests
+router.get("/user/my-requests", protect, getMyHelpRequests);
 
 export default router;

@@ -31,6 +31,7 @@ import Notification from "./models/Notification.js";
 import debugRoutes from './routes/debug.js';
 import skillRequestRoutes from "./routes/v1/skillRequestRoutes.js";
 import skillReviewRoutes from "./routes/v1/skillReviewRoutes.js";
+import helpRequestRoutes from "./routes/v1/helpRequestRoutes.js"; // KEEP THIS IMPORT
 
 // Helper function: verify JWT token
 const verifyToken = (token) => {
@@ -256,7 +257,6 @@ app.use((req, res, next) => {
 import authRoutes from "./routes/v1/authRoutes.js";
 import userRoutes from "./routes/v1/userRoutes.js";
 import eventRoutes from "./routes/v1/eventRoutes.js";
-import helpRequestRoutes from "./routes/v1/helpRequestRoutes.js";
 import resourceRoutes from "./routes/v1/resourceRoutes.js";
 import skillSharingRoutes from "./routes/v1/skillSharingRoutes.js";
 import userStatusRoutes from "./routes/v1/userStatusRoutes.js";
@@ -271,7 +271,7 @@ const API_PREFIX = "/api/v1";
 app.use(`${API_PREFIX}/auth`, authRoutes);
 app.use(`${API_PREFIX}/users`, userRoutes);
 app.use(`${API_PREFIX}/events`, eventRoutes);
-app.use(`${API_PREFIX}/helprequests`, helpRequestRoutes);
+// app.use(`${API_PREFIX}/helprequests`, helpRequestRoutes); // Comment out or remove this line
 app.use(`${API_PREFIX}/resources`, resourceRoutes);
 app.use(`${API_PREFIX}/skillsharings`, skillSharingRoutes);
 app.use(`${API_PREFIX}/user-status`, userStatusRoutes);
@@ -281,8 +281,9 @@ app.use(`${API_PREFIX}/notifications`, notificationRoutes);
 app.use(`${API_PREFIX}/messages`, messageRoutes);
 app.use(`${API_PREFIX}/dashboard`, dashboardRoutes);
 app.use('/debug', debugRoutes);
-app.use("/api/v1/skillrequests", skillRequestRoutes);
-app.use("/api/v1/skillreviews", skillReviewRoutes);
+app.use(`${API_PREFIX}/skillrequests`, skillRequestRoutes);
+app.use(`${API_PREFIX}/skillreviews`, skillReviewRoutes);
+app.use(`${API_PREFIX}/help-requests`, helpRequestRoutes); // Keep this one since your client code uses this path
 
 // Default API Route
 app.get(API_PREFIX, (req, res) => {

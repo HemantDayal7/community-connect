@@ -25,7 +25,10 @@ const notificationSchema = new mongoose.Schema(
         "skill_request",
         "event_rsvp",
         "event_update",
-        "event_canceled"
+        "event_canceled",
+        "help_offered", // Add this
+        "help_completed", // Add this
+        "help_request_updated" // Add this
       ], 
       required: true 
     },
