@@ -544,6 +544,7 @@ export default function HelpRequests() {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [activeMainTab, setActiveMainTab] = useState('community'); // Options: 'community' or 'my-requests'
   
   // Form state
   const [formData, setFormData] = useState({
@@ -772,7 +773,7 @@ export default function HelpRequests() {
     <div>
     {/* Use EXACTLY the same container as Resources page */}
     <div className="p-6 bg-white shadow-md rounded-lg">
-      <h1 className="text-2xl font-bold mb-4">Help Request</h1>
+      <h1 className="text-2xl font-bold mb-4">Help Requests</h1>
       
       {error && (
         <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
@@ -810,6 +811,30 @@ export default function HelpRequests() {
             />
           )}
 
+          {/* Main Tab Navigation */}
+          <div className="flex border-b border-gray-200 mb-6 mt-6">
+            <button
+              onClick={() => setActiveMainTab('community')}
+              className={`py-3 px-6 font-medium rounded-t-lg ${
+                activeMainTab === 'community'
+                  ? 'bg-white border border-gray-200 border-b-white text-blue-600'
+                  : 'bg-gray-50 text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Community Requests
+            </button>
+            <button
+              onClick={() => setActiveMainTab('my-requests')}
+              className={`py-3 px-6 font-medium rounded-t-lg ${
+                activeMainTab === 'my-requests'
+                  ? 'bg-white border border-gray-200 border-b-white text-blue-600'
+                  : 'bg-gray-50 text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              My Requests
+            </button>
+          </div>
+
           {/* Loading state */}
           {loading ? (
             <div className="flex justify-center my-8">
@@ -817,155 +842,196 @@ export default function HelpRequests() {
             </div>
           ) : (
             <>
-              {/* No requests found */}
-              {filteredRequests.length === 0 && (
-                <div className="bg-gray-50 p-6 text-center text-gray-500 rounded">
-                  No help requests found. {!showAddForm && "Click 'Request Help' to create one."}
+              {/* Community Requests Tab Content */}
+              {activeMainTab === 'community' && (
+                <div>
+                  {communityRequests.length === 0 ? (
+                    <div className="bg-gray-50 p-6 text-center text-gray-500 rounded">
+                      No community help requests found. Check back later or be the first to help someone in your community!
+                    </div>
+                  ) : (
+                    <div className="mb-8">
+                      <div className="flex items-center justify-between mb-3">
+                        <h2 className="text-lg font-medium">Community Requests</h2>
+                        <p className="text-sm text-gray-500">
+                          {communityRequests.length} {communityRequests.length === 1 ? "request" : "requests"} available
+                        </p>
+                      </div>
+                      
+                      {/* Status Tabs for Community Requests */}
+                      <div className="flex border-b border-gray-200 mb-4">
+                        <button 
+                          onClick={() => setCommunityTab('all')}
+                          className={`py-2 px-4 text-sm font-medium ${communityTab === 'all' 
+                            ? 'border-b-2 border-blue-500 text-blue-600' 
+                            : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                        >
+                          All
+                        </button>
+                        
+                        <button 
+                          onClick={() => setCommunityTab('pending')}
+                          className={`py-2 px-4 text-sm font-medium ${communityTab === 'pending' 
+                            ? 'border-b-2 border-yellow-500 text-yellow-600' 
+                            : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                        >
+                          Pending
+                        </button>
+
+                        <button 
+                          onClick={() => setCommunityTab('in-progress')}
+                          className={`py-2 px-4 text-sm font-medium ${communityTab === 'in-progress' 
+                            ? 'border-b-2 border-blue-500 text-blue-600' 
+                            : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                        >
+                          In Progress
+                        </button>
+
+                        <button 
+                          onClick={() => setCommunityTab('completed')}
+                          className={`py-2 px-4 text-sm font-medium ${communityTab === 'completed' 
+                            ? 'border-b-2 border-green-500 text-green-600' 
+                            : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                        >
+                          Completed
+                        </button>
+                      </div>
+                      
+                      {/* Filtered community requests */}
+                      <div className="space-y-4">
+                        {filteredCommunityRequests.length === 0 ? (
+                          <div className="bg-gray-50 p-4 text-center text-gray-500 rounded-lg">
+                            No {communityTab !== 'all' ? communityTab : ''} community requests found.
+                          </div>
+                        ) : (
+                          filteredCommunityRequests.map((request) => (
+                            // Your existing community request card code
+                            <div 
+                              key={request._id} 
+                              className={`rounded shadow-sm border overflow-hidden hover:shadow-md transition-shadow
+                                ${request.status === 'pending' ? 'bg-white border-yellow-200' : ''}
+                                ${request.status === 'in-progress' ? 'bg-blue-50 border-blue-200' : ''}
+                                ${request.status === 'completed' ? 'bg-green-50 border-green-200' : ''}
+                                ${request.status === 'canceled' ? 'bg-gray-50 border-gray-200' : ''}
+                              `}
+                            >
+                              {/* Existing request card content */}
+                              <div className="p-4">
+                                {/* ...existing card content... */}
+                                <div className="flex justify-between items-start">
+                                  <h3 className="text-lg font-semibold">{request.title}</h3>
+                                  <div className={`px-2 py-1 rounded-full text-xs ${URGENCY_LEVELS[request.urgency]?.color}`}>
+                                    {URGENCY_LEVELS[request.urgency]?.label || "Medium"} Priority
+                                  </div>
+                                </div>
+                                
+                                <p className="text-gray-600 text-sm line-clamp-2 my-2">
+                                  {request.description}
+                                </p>
+                                
+                                <div className="flex items-center text-xs text-gray-600 mt-2">
+                                  <span className="font-medium">Requested by: </span>
+                                  <span className="ml-1">{request.requesterId?.name}</span>
+                                </div>
+                                
+                                <div className="flex items-center text-xs text-gray-500 mt-2">
+                                  <MapPinIcon className="w-3 h-3 mr-1" />
+                                  {request.location}
+                                </div>
+                                
+                                <div className="flex items-center text-xs mt-2">
+                                  <span className={`
+                                    px-2 py-1 rounded-full 
+                                    ${request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}
+                                    ${request.status === 'in-progress' ? 'bg-blue-100 text-blue-800' : ''}
+                                    ${request.status === 'completed' ? 'bg-green-100 text-green-800' : ''}
+                                    ${request.status === 'canceled' ? 'bg-gray-100 text-gray-800' : ''}
+                                  `}>
+                                    {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                                  </span>
+                                  <span className="ml-2">{request.category}</span>
+                                </div>
+                                
+                                <div className="flex items-center justify-between mt-4">
+                                  <span className="text-xs text-gray-500">
+                                    {new Date(request.createdAt).toLocaleDateString()}
+                                  </span>
+                                  
+                                  <div className="flex space-x-2">
+                                    {/* Offer help button */}
+                                    {request.status === 'pending' && (
+                                      <button
+                                        onClick={() => handleOfferHelp(request._id)}
+                                        disabled={actionLoading}
+                                        className="flex items-center text-xs bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded"
+                                      >
+                                        <HandRaisedIcon className="h-3 w-3 mr-1" />
+                                        Offer Help
+                                      </button>
+                                    )}
+                                    
+                                    <button
+                                      onClick={() => handleViewDetails(request)}
+                                      className="flex items-center text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded"
+                                    >
+                                      Details
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
-              
-              {/* My requests */}
-              {myRequests.length > 0 && (
-                <HelpRequestsList
-                  requests={myRequests}
-                  title="My Requests"
-                  onViewDetails={handleViewDetails}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  onMessage={handleMessage}
-                  onComplete={handleCompleteRequest}
-                  onOfferHelp={handleOfferHelp}
-                  actionLoading={actionLoading}
-                  isUserRequest={true}
-                  userData={userData}
-                />
-              )}
-              
-              {/* Requests I'm helping with */}
-              {helpingRequests.length > 0 && (
-                <HelpRequestsList
-                  requests={helpingRequests}
-                  title="Requests I'm Helping With"
-                  onViewDetails={handleViewDetails}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  onMessage={handleMessage}
-                  onComplete={handleCompleteRequest}
-                  onOfferHelp={handleOfferHelp}
-                  actionLoading={actionLoading}
-                  isHelping={true}
-                  userData={userData}
-                />
-              )}
-              
-              {/* Community Requests Section */}
-              {communityRequests.length > 0 && (
-                <div className="mb-8">
-                  <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-lg font-medium">Community Requests</h2>
-                    <p className="text-sm text-gray-500">
-                      {communityRequests.length} {communityRequests.length === 1 ? "request" : "requests"}
-                    </p>
-                  </div>
-                  
-                  {/* Status Tabs */}
-                  <div className="flex border-b border-gray-200 mb-4">
-                    <button 
-                      onClick={() => setCommunityTab('all')}
-                      className={`py-2 px-4 text-sm font-medium ${communityTab === 'all' 
-                        ? 'border-b-2 border-blue-500 text-blue-600' 
-                        : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-                    >
-                      All
-                    </button>
-                    
-                    <button 
-                      onClick={() => setCommunityTab('pending')}
-                      className={`py-2 px-4 text-sm font-medium ${communityTab === 'pending' 
-                        ? 'border-b-2 border-yellow-500 text-yellow-600' 
-                        : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-                    >
-                      Pending
-                    </button>
-                  </div>
-                  
-                  {/* Filtered community requests */}
-                  <div className="space-y-4">
-                    {filteredCommunityRequests.length === 0 ? (
-                      <div className="bg-gray-50 p-4 text-center text-gray-500 rounded-lg">
-                        No {communityTab !== 'all' ? communityTab : ''} community requests found.
-                      </div>
-                    ) : (
-                      filteredCommunityRequests.map((request) => (
-                        // Your existing community request card code
-                        <div 
-                          key={request._id} 
-                          className={`rounded shadow-sm border overflow-hidden hover:shadow-md transition-shadow
-                            ${request.status === 'pending' ? 'bg-white border-yellow-200' : ''}
-                            ${request.status === 'in-progress' ? 'bg-blue-50 border-blue-200' : ''}
-                            ${request.status === 'completed' ? 'bg-green-50 border-green-200' : ''}
-                            ${request.status === 'canceled' ? 'bg-gray-50 border-gray-200' : ''}
-                          `}
-                        >
-                          <div className="p-4">
-                            <div className="flex justify-between items-start">
-                              <h3 className="text-lg font-semibold">{request.title}</h3>
-                              <div className={`px-2 py-1 rounded-full text-xs ${URGENCY_LEVELS[request.urgency]?.color}`}>
-                                {URGENCY_LEVELS[request.urgency]?.label || "Medium"} Priority
-                              </div>
-                            </div>
-                            
-                            <p className="text-gray-600 text-sm line-clamp-2 my-2">
-                              {request.description}
-                            </p>
-                            
-                            <div className="flex items-center text-xs text-gray-500 mt-2">
-                              <MapPinIcon className="w-3 h-3 mr-1" />
-                              {request.location}
-                            </div>
-                            
-                            <div className="flex items-center text-xs mt-2">
-                              <span className={`
-                                px-2 py-1 rounded-full 
-                                ${request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}
-                                ${request.status === 'in-progress' ? 'bg-blue-100 text-blue-800' : ''}
-                                ${request.status === 'completed' ? 'bg-green-100 text-green-800' : ''}
-                                ${request.status === 'canceled' ? 'bg-gray-100 text-gray-800' : ''}
-                              `}>
-                                {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
-                              </span>
-                              <span className="ml-2">{request.category}</span>
-                            </div>
-                            
-                            <div className="flex items-center justify-between mt-4">
-                              <span className="text-xs text-gray-500">
-                                {new Date(request.createdAt).toLocaleDateString()}
-                              </span>
-                              
-                              <div className="flex space-x-2">
-                                {/* Offer help button */}
-                                <button
-                                  onClick={() => handleOfferHelp(request._id)}
-                                  disabled={actionLoading}
-                                  className="flex items-center text-xs bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded"
-                                >
-                                  <HandRaisedIcon className="h-3 w-3 mr-1" />
-                                  Offer Help
-                                </button>
-                                
-                                <button
-                                  onClick={() => handleViewDetails(request)}
-                                  className="flex items-center text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded"
-                                >
-                                  Details
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
+
+              {/* My Requests Tab Content */}
+              {activeMainTab === 'my-requests' && (
+                <div>
+                  {myRequests.length === 0 && helpingRequests.length === 0 ? (
+                    <div className="bg-gray-50 p-6 text-center text-gray-500 rounded">
+                      You have not created any help requests yet. Click &quot;Request Help&quot; to get started.
+                    </div>
+                  ) : (
+                    <>
+                      {/* My requests */}
+                      {myRequests.length > 0 && (
+                        <HelpRequestsList
+                          requests={myRequests}
+                          title="My Requests"
+                          onViewDetails={handleViewDetails}
+                          onEdit={handleEdit}
+                          onDelete={handleDelete}
+                          onMessage={handleMessage}
+                          onComplete={handleCompleteRequest}
+                          onOfferHelp={handleOfferHelp}
+                          actionLoading={actionLoading}
+                          isUserRequest={true}
+                          userData={userData}
+                        />
+                      )}
+                      
+                      {/* Requests I'm helping with */}
+                      {helpingRequests.length > 0 && (
+                        <HelpRequestsList
+                          requests={helpingRequests}
+                          title="Requests I'm Helping With"
+                          onViewDetails={handleViewDetails}
+                          onEdit={handleEdit}
+                          onDelete={handleDelete}
+                          onMessage={handleMessage}
+                          onComplete={handleCompleteRequest}
+                          onOfferHelp={handleOfferHelp}
+                          actionLoading={actionLoading}
+                          isHelping={true}
+                          userData={userData}
+                        />
+                      )}
+                    </>
+                  )}
                 </div>
               )}
               
