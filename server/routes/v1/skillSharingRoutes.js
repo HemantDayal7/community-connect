@@ -7,7 +7,8 @@ import {
   getSkillSharingById,
   updateSkillSharing,
   deleteSkillSharing,
-  getSkillRequests,
+  getUserSkillRequests as getSkillRequests,  // Use the correct name with alias
+  updateSkillSettings,
 } from "../../controllers/skill/skillSharingController.js";
 
 const router = express.Router();
@@ -44,5 +45,8 @@ router.delete("/:id", protect, validateSkillId, deleteSkillSharing);
 
 // ✅ Get skill requests for a specific skill listing
 router.get("/:id/requests", protect, validateSkillId, getSkillRequests);
+
+// ✅ Update skill settings (like allowMultipleStudents)
+router.put("/:id/settings", protect, validateSkillId, updateSkillSettings);
 
 export default router;

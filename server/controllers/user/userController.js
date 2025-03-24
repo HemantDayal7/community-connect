@@ -3,6 +3,11 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import { validationResult } from "express-validator";
+import Resource from "../../models/Resource.js";
+import HelpRequest from "../../models/HelpRequest.js";
+import SkillSharing from "../../models/SkillSharing.js";
+import Event from "../../models/Event.js";
+import Message from "../../models/Message.js";
 
 dotenv.config();
 
@@ -234,6 +239,136 @@ const searchUsers = async (req, res) => {
   }
 };
 
+// Add this function to your userController
+const getUserActivity = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    console.log(`Fetching activity for user: ${userId}`);
+    
+    // Make sure we have a valid userId
+    if (!userId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "User ID is required" 
+      });
+    }
+    
+    // Wrap each query in a try/catch to prevent one failing query from breaking everything
+    let resources = [], helpRequests = [], skills = [], events = [], messages = [];
+    
+    try {
+      resources = await Resource.find({ ownerId: userId })
+        .sort({ createdAt: -1 })
+        .limit(5);
+    } catch (err) {
+      console.error("Error fetching resources:", err);
+    }
+    
+    try {
+      helpRequests = await HelpRequest.find({ 
+        $or: [{ requesterId: userId }, { helperId: userId }] 
+      })
+        .sort({ createdAt: -1 })
+        .limit(5);
+    } catch (err) {
+      console.error("Error fetching help requests:", err);
+    }
+    
+    try {
+      skills = await SkillSharing.find({ userId: userId })
+        .sort({ createdAt: -1 })
+        .limit(5);
+    } catch (err) {
+      console.error("Error fetching skills:", err);
+    }
+    
+    try {
+      events = await Event.find({
+        $or: [{ hostId: userId }, { attendees: userId }]
+      })
+        .sort({ createdAt: -1 })
+        .limit(5);
+    } catch (err) {
+      console.error("Error fetching events:", err);
+    }
+    
+    try {
+      messages = await Message.find({ senderId: userId })
+        .sort({ createdAt: -1 })
+        .limit(5);
+    } catch (err) {
+      console.error("Error fetching messages:", err);
+    }
+    
+    // Format activities (your existing code looks good)
+    const activities = [
+      // Format resources as activities
+      ...resources.map(resource => ({
+        type: 'resource',
+        description: `Shared a resource: ${resource.title}`,
+        timestamp: resource.createdAt,
+        resourceId: resource._id,
+        icon: '📦'
+      })),
+      
+      // Format help requests as activities
+      ...helpRequests.map(help => ({
+        type: 'help',
+        description: help.requesterId?.toString() === userId 
+          ? `Requested help: ${help.title}` 
+          : `Offered to help with: ${help.title}`,
+        timestamp: help.createdAt,
+        helpId: help._id,
+        icon: '🤝'
+      })),
+      
+      // Format skills as activities
+      ...skills.map(skill => ({
+        type: 'skill',
+        description: `Offered skill: ${skill.title}`,
+        timestamp: skill.createdAt,
+        skillId: skill._id,
+        icon: '🎓'
+      })),
+      
+      // Format events as activities
+      ...events.map(event => ({
+        type: 'event',
+        description: event.hostId?.toString() === userId 
+          ? `Hosted event: ${event.title}` 
+          : `RSVP'd to event: ${event.title}`,
+        timestamp: event.createdAt,
+        eventId: event._id,
+        icon: '📅'
+      })),
+      
+      // Format messages as activities
+      ...messages.map(message => ({
+        type: 'message',
+        description: `Sent a message to another user`,
+        timestamp: message.createdAt,
+        icon: '💬'
+      }))
+    ];
+    
+    // Sort all activities by timestamp
+    activities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    
+    return res.status(200).json({ 
+      success: true,
+      activities: activities.slice(0, 10) // Limit to 10 most recent
+    });
+    
+  } catch (error) {
+    console.error("Error fetching user activity:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Error fetching user activity",
+      error: error.message
+    });
+  }
+};
+
 // ✅ Export all functions once at the bottom
 export {
   registerUser,
@@ -244,4 +379,5 @@ export {
   deleteUser,
   getAllUsers,
   searchUsers,
+  getUserActivity
 };

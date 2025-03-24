@@ -10,6 +10,7 @@ import {
   getUserById,
   deleteUser,
   searchUsers,
+  getUserActivity,
 } from "../../controllers/user/userController.js";
 
 const router = express.Router();
@@ -90,6 +91,13 @@ router.get("/search", protect, searchUsers);
  * @access   Private (Requires Authentication)
  */
 router.get("/:id", protect, validateUserId, getUserById);
+
+/**
+ * @route    GET /api/v1/users/:userId/activity
+ * @desc     Get user activity
+ * @access   Private (Requires Authentication)
+ */
+router.get("/:userId/activity", protect, getUserActivity);
 
 /**
  * @route    DELETE /api/v1/users/:id

@@ -1,6 +1,7 @@
 import SkillReview from "../../models/SkillReview.js";
 import SkillRequest from "../../models/SkillRequest.js";
 import User from "../../models/User.js";
+import Notification from "../../models/Notification.js";
 import { validationResult } from "express-validator";
 
 /**
@@ -20,51 +21,70 @@ export const createSkillReview = async (req, res) => {
 
     // Find the skill request
     const request = await SkillRequest.findById(requestId)
-      .populate("skillId", "title");
-    
-    if (!request) {
-      return res.status(404).json({ message: "Skill request not found" });
-    }
+      .populate("skillId")
+      .populate("requesterId", "name")
+      .populate("providerId", "name");
 
-    // Verify request is completed
-    if (request.status !== "completed") {
-      return res.status(400).json({ 
-        message: "You can only review after the skill exchange is completed" 
+    if (!request) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Skill request not found" 
       });
     }
 
-    // Check if user is part of this request
-    const isRequester = request.requesterId.toString() === reviewerId.toString();
-    const isProvider = request.providerId.toString() === reviewerId.toString();
+    // Check if request is completed
+    if (request.status !== "completed") {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot review a request that is not completed. Current status: ${request.status}`
+      });
+    }
+
+    // Determine if reviewer is requester or provider
+    const isRequester = request.requesterId._id.toString() === reviewerId.toString();
+    const isProvider = request.providerId._id.toString() === reviewerId.toString();
 
     if (!isRequester && !isProvider) {
-      return res.status(403).json({ 
-        message: "You are not authorized to review this skill exchange" 
+      return res.status(403).json({
+        success: false,
+        message: "You can only review skill exchanges you were involved in"
       });
     }
 
-    // Determine who is being reviewed
-    const reviewedUserId = isRequester ? request.providerId : request.requesterId;
-    
-    // Check if user has already reviewed this request
-    if ((isRequester && request.requesterReviewed) || 
-        (isProvider && request.providerReviewed)) {
-      return res.status(400).json({ message: "You have already reviewed this skill exchange" });
+    // Determine the user being reviewed
+    const reviewedUserId = isRequester 
+      ? request.providerId._id 
+      : request.requesterId._id;
+
+    // Check if already reviewed
+    if (isRequester && request.requesterReviewed) {
+      return res.status(400).json({
+        success: false,
+        message: "You have already submitted a review for this skill exchange"
+      });
+    }
+
+    if (isProvider && request.providerReviewed) {
+      return res.status(400).json({
+        success: false,
+        message: "You have already submitted a review for this skill exchange"
+      });
     }
 
     // Create the review
     const review = new SkillReview({
-      reviewerId,
-      providerId: request.providerId,
-      skillId: request.skillId,
       requestId,
+      skillId: request.skillId._id,
+      reviewerId,
+      reviewedUserId,
       rating,
-      comment
+      comment,
+      reviewerRole: isRequester ? "requester" : "provider"
     });
 
     await review.save();
 
-    // Update request to mark as reviewed
+    // Update the request to mark it as reviewed
     if (isRequester) {
       request.requesterReviewed = true;
     } else {
@@ -72,28 +92,88 @@ export const createSkillReview = async (req, res) => {
     }
     await request.save();
 
-    // Update the reviewed user's trust score
+    // Update user trust score
     const reviewedUser = await User.findById(reviewedUserId);
-    const totalReviews = reviewedUser.totalReviews || 0;
-    const currentScore = reviewedUser.trustScore || 5.0;
     
-    // Calculate new trust score
-    const newTotalReviews = totalReviews + 1;
-    const newTrustScore = ((currentScore * totalReviews) + rating) / newTotalReviews;
-    
-    // Update the user
-    reviewedUser.trustScore = Number(newTrustScore.toFixed(2));
-    reviewedUser.totalReviews = newTotalReviews;
-    await reviewedUser.save();
+    if (reviewedUser) {
+      // Calculate new trust score the same way as in resource reviews
+      const totalReviews = reviewedUser.totalReviews || 0;
+      const currentScore = reviewedUser.trustScore || 5.0;
+      
+      // Calculate new trust score
+      const newTotalReviews = totalReviews + 1;
+      const newTrustScore = ((currentScore * totalReviews) + rating) / newTotalReviews;
+      
+      // Update the user
+      reviewedUser.trustScore = Number(newTrustScore.toFixed(2));
+      reviewedUser.totalReviews = newTotalReviews;
+      await reviewedUser.save();
+    }
 
-    res.status(201).json({ 
+    // Defensive check for reviewedUserId
+    if (!reviewedUserId) {
+      console.error("Missing reviewedUserId for notification. Request:", request._id);
+      return res.status(400).json({
+        success: false,
+        message: "Error creating review - missing recipient information"
+      });
+    }
+
+    // Create notification
+    const notification = new Notification({
+      userId: reviewedUserId, // FIXED ✅
+      message: `${req.user.name} has left you a review for the skill "${request.skillId.title}"`,
+      type: "skill_review",
+      link: `/profile`,
+      isRead: false
+    });
+
+    await notification.save();
+
+    // Send real-time notification
+    const io = req.app.get('io');
+    if (io) {
+      io.to(reviewedUserId.toString()).emit("notification", {
+        _id: notification._id,
+        message: notification.message,
+        type: notification.type,
+        link: notification.link,
+        isRead: false,
+        createdAt: notification.createdAt
+      });
+    }
+
+    // If this is a requester reviewing a provider
+    if (!isProvider) {
+      await Notification.create({
+        userId: request.providerId._id, // Add this missing userId
+        type: 'skill_review',
+        message: `${req.user.name} left a review on your skill service`,
+        link: '/skill-requests'
+      });
+    } 
+    // If this is a provider reviewing a requester
+    else {
+      await Notification.create({
+        userId: request.requesterId._id, // Add this missing userId
+        type: 'skill_review',
+        message: `${req.user.name} left a review on your skill exchange`,
+        link: '/skill-requests'
+      });
+    }
+
+    // Return the created review
+    res.status(201).json({
       success: true,
       message: "Review submitted successfully",
       review
     });
   } catch (error) {
-    console.error("🔥 Error creating skill review:", error);
-    res.status(500).json({ success: false, message: "Internal Server Error" });
+    console.error("Error creating skill review:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error, please try again"
+    });
   }
 };
 
@@ -155,8 +235,11 @@ export const getPendingSkillReviews = async (req, res) => {
       pendingAsProvider
     });
   } catch (error) {
-    console.error("🔥 Error fetching pending skill reviews:", error);
-    res.status(500).json({ success: false, message: "Internal Server Error" });
+    console.error("Error fetching pending skill reviews:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error, please try again"
+    });
   }
 };
 

@@ -21,14 +21,18 @@ const notificationSchema = new mongoose.Schema(
         "borrow_request",
         "request_approved",
         "request_declined",
+        "skill_request", 
         "skill_request_response",
-        "skill_request",
+        "skill_completed", 
+        "skill_review", 
         "event_rsvp",
         "event_update",
         "event_canceled",
-        "help_offered", // Add this
-        "help_completed", // Add this
-        "help_request_updated" // Add this
+        "help_offered",
+        "help_completed",
+        "help_request_updated",
+        "request_accepted",  
+        "request_declined"
       ], 
       required: true 
     },

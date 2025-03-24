@@ -57,7 +57,16 @@ const BorrowRequests = ({ onRequestProcessed }) => {
   }
 
   if (requests.length === 0) {
-    return <div className="p-4 text-gray-500">No pending borrow requests</div>;
+    return (
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="p-4 bg-blue-50 border-b border-blue-100">
+          <h2 className="text-lg font-semibold text-blue-800">Pending Borrow Requests</h2>
+        </div>
+        <div className="p-6 text-center text-gray-500">
+          <p>No pending borrow requests at this time</p>
+        </div>
+      </div>
+    );
   }
 
   return (

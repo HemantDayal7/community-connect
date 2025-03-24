@@ -5,7 +5,9 @@ import {
   createSkillRequest,
   respondToSkillRequest,
   completeSkillRequest,
-  getUserSkillRequests
+  getUserSkillRequests,
+  getPendingRequests,
+  completeSkillRequestBySkillId
 } from "../../controllers/skill/skillRequestController.js";
 
 const router = express.Router();
@@ -22,6 +24,13 @@ const validateRequestId = [
 
 // Get all skill requests for the authenticated user (as provider or requester)
 router.get("/", protect, getUserSkillRequests);
+
+// Add this route
+
+router.put('/complete-by-skill/:skillId', protect, completeSkillRequestBySkillId);
+
+// Get pending requests where user is provider
+router.get('/pending', protect, getPendingRequests);
 
 // Create a new skill request
 router.post("/", protect, validateSkillRequest, createSkillRequest);

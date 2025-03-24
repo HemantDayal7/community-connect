@@ -217,7 +217,7 @@ export const deleteSkillSharing = async (req, res) => {
 };
 
 // Add this function in your controller
-export const getSkillRequests = async (req, res) => {
+export const getUserSkillRequests = async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -233,3 +233,44 @@ export const getSkillRequests = async (req, res) => {
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
+
+// Add this function to the file
+
+/**
+ * @desc Update skill settings
+ * @route PUT /api/v1/skillsharings/:id/settings
+ * @access Private
+ */
+export const updateSkillSettings = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { allowMultipleStudents } = req.body;
+    
+    // Find the skill
+    const skill = await SkillSharing.findById(id);
+    if (!skill) {
+      return res.status(404).json({ message: "Skill not found" });
+    }
+    
+    // Check ownership
+    if (skill.userId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Unauthorized: You can only update your own skills" });
+    }
+    
+    // Update the setting
+    skill.allowMultipleStudents = allowMultipleStudents;
+    await skill.save();
+    
+    // Return the updated skill
+    const updatedSkill = await SkillSharing.findById(id).populate("userId", "name trustScore");
+    
+    res.status(200).json({ 
+      message: "Skill settings updated successfully", 
+      skill: updatedSkill 
+    });
+  } catch (error) {
+    console.error("Error updating skill settings:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+

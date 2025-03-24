@@ -1,7 +1,7 @@
 import { createContext, useState, useEffect, useContext } from "react";
 import { getUserProfile } from "../services/authService";
 import PropTypes from "prop-types";
-import socket, { connectSocket } from "../services/socket";
+import { connectSocket } from "../context/SocketContext";
 import API from "../services/api";
 
 // Create context with default values
@@ -26,11 +26,13 @@ export function AuthProvider({ children }) {
   const [userData, setUserData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authError, setAuthError] = useState(null);
   
   // Function to refresh auth state
   const refreshAuthStatus = async () => {
     try {
       setIsLoading(true);
+      setAuthError(null);
       console.log("Refreshing authentication status...");
       
       // Check for token
@@ -43,10 +45,42 @@ export function AuthProvider({ children }) {
         return;
       }
       
-      // Try to get user data
       try {
+        // Check token validity
+        const payload = token.split('.')[1];
+        if (!payload) throw new Error("Invalid token format");
+        
+        const decodedPayload = JSON.parse(atob(payload));
+        const expiryTime = decodedPayload.exp * 1000;
+        
+        if (Date.now() > expiryTime) {
+          console.warn("Token has expired, attempting refresh");
+          
+          try {
+            // Try to refresh the token
+            const refreshResponse = await API.post("/auth/refresh-token", {});
+            
+            if (refreshResponse.data && refreshResponse.data.accessToken) {
+              // Update token in localStorage
+              localStorage.setItem("token", refreshResponse.data.accessToken);
+              API.defaults.headers.common["Authorization"] = `Bearer ${refreshResponse.data.accessToken}`;
+              console.log("Token refreshed successfully");
+            } else {
+              throw new Error("Token refresh failed");
+            }
+          } catch (refreshError) {
+            console.error("Token refresh failed:", refreshError);
+            localStorage.removeItem("token");
+            setIsAuthenticated(false);
+            setUserData(null);
+            return;
+          }
+        }
+        
         // Set token in API headers
         API.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+        
+        // Try to get user data
         const response = await getUserProfile();
         
         if (response && response._id) {
@@ -57,13 +91,9 @@ export function AuthProvider({ children }) {
           
           // Connect socket if needed
           try {
-            if (socket && !socket.connected) {
-              connectSocket();
-              console.log("Socket connected after auth refresh");
-            }
+            connectSocket();
           } catch (socketErr) {
             console.error("Non-critical socket error:", socketErr);
-            // Don't fail auth just because socket fails
           }
         } else {
           console.warn("Invalid user data response");
@@ -75,9 +105,13 @@ export function AuthProvider({ children }) {
       } catch (err) {
         console.error("Error during auth refresh:", err);
         
-        // Only log out for 401 errors
-        if (err.response && err.response.status === 401) {
-          console.log("Received 401, clearing auth state");
+        setAuthError("Authentication failed: " + (err.message || "Unknown error"));
+        
+        // Only log out for 401 errors or token-related errors
+        if (err.response?.status === 401 || 
+            err.message.includes("token") || 
+            err.message.includes("expired")) {
+          console.log("Authentication error, clearing auth state");
           localStorage.removeItem("token");
           localStorage.removeItem("userData");
           setIsAuthenticated(false);
@@ -86,22 +120,16 @@ export function AuthProvider({ children }) {
       }
     } catch (error) {
       console.error("Critical auth refresh error:", error);
+      setAuthError("Critical authentication error");
     } finally {
       setIsLoading(false);
     }
   };
-
-  // Refresh auth status on component mount
+  
+  // Initialize auth state on component mount
   useEffect(() => {
     console.log("AuthProvider mounted, refreshing status");
-    let mounted = true;
-    
-    const initAuth = async () => {
-      await refreshAuthStatus();
-      if (!mounted) return;
-    };
-    
-    initAuth();
+    refreshAuthStatus();
     
     const handleStorageChange = (e) => {
       if (e.key === "token") {
@@ -112,14 +140,13 @@ export function AuthProvider({ children }) {
     window.addEventListener("storage", handleStorageChange);
     
     return () => {
-      mounted = false;
       window.removeEventListener("storage", handleStorageChange);
     };
   }, []);
 
   // Login function
-  const login = async (token, userData) => {
-    if (!token || !userData) {
+  const login = async (token, userDataObj) => {
+    if (!token || !userDataObj) {
       console.error("Missing required login data");
       return false;
     }
@@ -127,29 +154,27 @@ export function AuthProvider({ children }) {
     try {
       // Store authentication data
       localStorage.setItem("token", token);
-      localStorage.setItem("userData", JSON.stringify(userData));
+      localStorage.setItem("userData", JSON.stringify(userDataObj));
       
       // Update state
-      setUserData(userData);
+      setUserData(userDataObj);
       setIsAuthenticated(true);
+      setAuthError(null);
       
       // Set auth header for API requests
       API.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       
       // Connect socket
       try {
-        if (socket && !socket.connected) {
-          connectSocket();
-          console.log("Socket connected after login");
-        }
+        connectSocket();
       } catch (socketErr) {
         console.error("Socket connection error:", socketErr);
-        // Don't fail login if socket fails
       }
       
       return true;
     } catch (error) {
       console.error("Login function error:", error);
+      setAuthError("Login failed: " + (error.message || "Unknown error"));
       return false;
     } finally {
       setIsLoading(false);
@@ -166,19 +191,13 @@ export function AuthProvider({ children }) {
       // Update state
       setUserData(null);
       setIsAuthenticated(false);
+      setAuthError(null);
       
       // Remove auth header
       delete API.defaults.headers.common["Authorization"];
       
-      // Disconnect socket
-      try {
-        if (socket && socket.connected) {
-          socket.disconnect();
-          console.log("Socket disconnected after logout");
-        }
-      } catch (socketErr) {
-        console.error("Error disconnecting socket:", socketErr);
-      }
+      // Disconnect socket if needed
+      
     } catch (error) {
       console.error("Logout error:", error);
     }
@@ -188,6 +207,7 @@ export function AuthProvider({ children }) {
     userData,
     isLoading,
     isAuthenticated,
+    authError,
     login,
     logout,
     refreshAuthStatus

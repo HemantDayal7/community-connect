@@ -1,5 +1,5 @@
 import express from "express";
-import { body, param } from "express-validator";
+import { body, param, check } from "express-validator";
 import { protect } from "../../middleware/authMiddleware.js";
 import {
   createSkillReview,
@@ -12,8 +12,8 @@ const router = express.Router();
 
 // Validation middleware
 const validateReview = [
-  body("requestId").isMongoId().withMessage("Invalid request ID"),
-  body("rating").isInt({ min: 1, max: 5 }).withMessage("Rating must be between 1-5"),
+  check("requestId").notEmpty().withMessage("Request ID is required"),
+  check("rating").isInt({ min: 1, max: 5 }).withMessage("Rating must be between 1 and 5"),
   body("comment").optional().isString().withMessage("Comment must be a string")
 ];
 

@@ -1,6 +1,5 @@
 import express from 'express';
 import { protect } from '../../middleware/authMiddleware.js';
-// FIXED: Use correct path for upload middleware
 import upload from '../../middleware/fileUpload.js';
 import {
   createResource,
@@ -31,7 +30,7 @@ router.put('/return/:id', protect, returnResource);
 // Dynamic routes with ID parameters AFTER specific routes
 router.get('/:id', getResourceById);
 router.post('/', protect, upload.single('image'), createResource);
-router.put('/:id', protect, updateResource);
+router.put('/:id', protect, upload.single('image'), updateResource);
 router.delete('/:id', protect, deleteResource);
 router.put('/:id/status', protect, updateResourceStatus);
 

@@ -6,6 +6,8 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import ErrorBoundary from './components/ErrorBoundary';
 import { useSocket } from './context/SocketContext';
+import AuthErrorFallback from './components/auth/AuthErrorFallback';
+import { SocketProvider } from './context/SocketContext';
 
 // Layout
 import MainLayout from "./components/layout/MainLayout";
@@ -51,14 +53,24 @@ ProtectedRoute.propTypes = {
 };
 
 // Main App Router Component
-export default function AppRouter() {
-  console.log("Rendering AppRouter component");
+export default function App() {
+  console.log("Rendering App component");
   
   return (
     <Router>
-      <ErrorBoundary>
+      <ErrorBoundary
+        FallbackComponent={AuthErrorFallback}
+        onReset={() => {
+          // Reset the app state here
+          localStorage.removeItem('token');
+          localStorage.removeItem('userData');
+          window.location.href = '/login';
+        }}
+      >
         <AuthProvider>
-          <AppRoutes />
+          <SocketProvider>
+            <AppRoutes />
+          </SocketProvider>
         </AuthProvider>
       </ErrorBoundary>
     </Router>

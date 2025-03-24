@@ -8,33 +8,93 @@ const API_URL = `${BASE_URL}/api/v1`;
 
 // Create axios instance with base URL
 const API = axios.create({
-  baseURL: API_URL, // Already includes /api/v1
+  baseURL: API_URL,
   headers: {
     "Content-Type": "application/json",
   },
   withCredentials: true, // Important for cookies
 });
 
-// Check these lines to ensure proper configuration
-
-// Make sure baseURL is set correctly
-axios.defaults.baseURL = import.meta.env.VITE_API_URL || "http://localhost:5050/api/v1";
-
-// Check how authorization headers are being set
-axios.interceptors.request.use((config) => {
+// Check token expiration and validity
+const checkTokenValidity = () => {
   const token = localStorage.getItem("token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  
+  if (!token) {
+    console.log("No token found");
+    return false;
   }
+  
+  try {
+    // Decode the token to get the expiration time
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const expiryTime = payload.exp * 1000; // Convert to milliseconds
+    
+    // Check if token is expired
+    if (Date.now() > expiryTime) {
+      console.warn("⚠️ Token has expired");
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error decoding token:", error);
+    return false;
+  }
+};
+
+// Add auth token to requests
+API.interceptors.request.use(async (config) => {
+  const token = localStorage.getItem("token");
+  
+  if (token) {
+    // Check if token is valid
+    if (checkTokenValidity()) {
+      config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      // Try to refresh the token if available
+      try {
+        console.log("Attempting to refresh token...");
+        const response = await axios.post(`${API_URL}/auth/refresh-token`, {}, {
+          withCredentials: true
+        });
+        
+        if (response.data && response.data.accessToken) {
+          localStorage.setItem("token", response.data.accessToken);
+          config.headers.Authorization = `Bearer ${response.data.accessToken}`;
+          console.log("✅ Token refreshed successfully");
+        } else {
+          // Handle failed refresh by removing invalid token
+          localStorage.removeItem("token");
+          console.warn("⚠️ Token refresh failed, user will need to login again");
+          
+          // Only redirect if on a protected page
+          if (!window.location.pathname.includes('/login') && 
+              !window.location.pathname.includes('/register')) {
+            window.location.href = "/login";
+          }
+        }
+      } catch (error) {
+        console.error("Token refresh error:", error);
+        localStorage.removeItem("token");
+        
+        // Only redirect if on a protected page
+        if (!window.location.pathname.includes('/login') && 
+            !window.location.pathname.includes('/register')) {
+          window.location.href = "/login";
+        }
+      }
+    }
+  }
+  
   return config;
+}, (error) => {
+  return Promise.reject(error);
 });
 
-// Add this to your interceptor if you don't already have it
-
 // Debug interceptor
-axios.interceptors.request.use(
+API.interceptors.request.use(
   (config) => {
-    console.log(`🚀 ${config.method.toUpperCase()} ${config.url}`);
+    console.log(`🚀 ${config.method?.toUpperCase()} ${config.url}`);
     return config;
   },
   (error) => {
@@ -42,46 +102,33 @@ axios.interceptors.request.use(
   }
 );
 
-axios.interceptors.response.use(
-  (response) => {
-    console.log(`✅ ${response.status} ${response.config.method.toUpperCase()} ${response.config.url}`);
-    return response;
-  },
-  (error) => {
-    console.error(`❌ Error: ${error.response?.status} ${error.config?.method?.toUpperCase()} ${error.config?.url}`);
-    return Promise.reject(error);
-  }
-);
-
-// Add interceptors as needed
-
-// Add auth token to requests
-API.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-}, (error) => {
-  return Promise.reject(error);
-});
-
-// Update interceptors to handle more status codes as success
+// Improved response interceptor
 API.interceptors.response.use(
   (response) => {
-    // Log success responses
-    console.log(`✅ ${response.status} ${response.config.method.toUpperCase()} ${response.config.url}`);
+    console.log(`✅ ${response.status} ${response.config.method?.toUpperCase()} ${response.config.url}`);
     return response;
   },
   (error) => {
-    // Don't treat 304 Not Modified as an error
-    if (error.response && error.response.status === 304) {
-      console.log(`ℹ️ 304 Not Modified: ${error.config?.method?.toUpperCase()} ${error.config?.url}`);
-      return Promise.resolve({ data: error.response.data, status: 304 });
+    if (error.response) {
+      console.error(`❌ Error: ${error.response.status} ${error.config?.method?.toUpperCase()} ${error.config?.url}`);
+      
+      // Handle authentication errors
+      if (error.response.status === 401 || error.response.status === 403) {
+        console.warn("Authentication error:", error.response.data?.message || "Unauthorized access");
+        
+        // Remove invalid token
+        localStorage.removeItem("token");
+        
+        // Redirect to login page if not already there
+        if (!window.location.pathname.includes('/login') && 
+            !window.location.pathname.includes('/register')) {
+          window.location.href = "/login";
+        }
+      }
+    } else {
+      console.error(`❌ Request failed:`, error.message);
     }
     
-    // Log error responses
-    console.error(`❌ Error: ${error.response?.status} ${error.config?.method?.toUpperCase()} ${error.config?.url}`);
     return Promise.reject(error);
   }
 );

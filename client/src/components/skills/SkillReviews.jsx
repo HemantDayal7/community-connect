@@ -32,34 +32,48 @@ const SkillReviews = ({ skillId, providerId, showTitle = true, onClose }) => {
   const [averageRating, setAverageRating] = useState(0);
 
   useEffect(() => {
-    const fetchReviews = async () => {
+    async function fetchReviews() {
+      setLoading(true);
       try {
-        setLoading(true);
-        let endpoint = skillId ? `/skillreviews/skill/${skillId}` : `/skillreviews/user/${providerId}`;
-        const { data } = await API.get(endpoint);
+        // Initialize query params based on what's provided
+        let endpoint = "/skillreviews";
+        let params = new URLSearchParams();
         
-        const reviewsData = data?.reviews || [];
-        setReviews(reviewsData);
+        if (skillId) {
+          params.append("skillId", skillId);
+        }
+        
+        if (providerId) {
+          params.append("providerId", providerId);
+        }
+        
+        const queryString = params.toString();
+        const { data } = await API.get(`${endpoint}?${queryString}`);
+        
+        // Set the reviews
+        setReviews(data.reviews || []);
         
         // Calculate average rating
-        if (reviewsData.length > 0) {
-          const sum = reviewsData.reduce((total, review) => total + review.rating, 0);
-          setAverageRating((sum / reviewsData.length).toFixed(1));
+        if (data.reviews && data.reviews.length > 0) {
+          const totalRating = data.reviews.reduce((acc, review) => acc + review.rating, 0);
+          setAverageRating((totalRating / data.reviews.length).toFixed(1));
+        } else {
+          setAverageRating(0);
         }
         
         setError(null);
       } catch (err) {
-        console.error("Error fetching skill reviews:", err);
-        setError("Failed to load reviews");
+        console.error("Error fetching reviews:", err);
+        setError("Failed to load reviews. Please try again later.");
       } finally {
         setLoading(false);
       }
-    };
-
+    }
+    
+    // Only fetch if we have at least one ID to filter by
     if (skillId || providerId) {
       fetchReviews();
     } else {
-      setError("Either skillId or providerId must be provided");
       setLoading(false);
     }
   }, [skillId, providerId]);

@@ -5,6 +5,7 @@ import {
   StarIcon,
   TrashIcon,
   UserIcon,
+  ArrowPathIcon, // Added missing import
 } from "@heroicons/react/24/solid";
 import API from "../../services/api";
 
@@ -21,6 +22,8 @@ export default function ResourceCard({
   onOpenChat,
   onDelete,
   onShowReviewModal,
+  onViewDetails, // Added for detailed view functionality
+  onEdit, // Add this new prop
 }) {
   // Component state management
   const isMounted = useRef(true);
@@ -28,6 +31,7 @@ export default function ResourceCard({
   const [imageError, setImageError] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [finalImageUrl, setFinalImageUrl] = useState(null);
+  const [showTooltip, setShowTooltip] = useState(false);
   
   // Cleanup on unmount
   useEffect(() => {
@@ -37,7 +41,7 @@ export default function ResourceCard({
     };
   }, []);
 
-  // FIXED: Improved image URL construction
+  // Improved image URL construction
   useEffect(() => {
     // Skip if resource or image is missing
     if (!resource?.image) {
@@ -48,12 +52,11 @@ export default function ResourceCard({
     }
 
     try {
-      console.log(`📷 Processing image for "${resource.title || 'Untitled resource'}"`);
-      console.log(`   Original image path: "${resource.image}"`);
+      // Production code should have minimal logging
+      // console.log(`📷 Processing image for "${resource.title || 'Untitled resource'}"`);
       
       // Case 1: If it's already a complete URL, use it directly
       if (/^https?:\/\//i.test(resource.image)) {
-        console.log(`   Using full URL directly: ${resource.image}`);
         setFinalImageUrl(resource.image);
         setImageLoading(true);
         setImageError(false);
@@ -74,47 +77,24 @@ export default function ResourceCard({
         imageFilename = processedPath;
       }
       
-      console.log(`   Extracted filename: "${imageFilename}"`);
-      
-      // FIXED: Add cache-busting parameter to prevent browser caching issues
-      // This is critical for solving intermittent image loading problems
+      // Add cache-busting parameter to prevent browser caching issues
       const timestamp = new Date().getTime();
       const url = `${SERVER_URL}/uploads/${imageFilename}?_t=${timestamp}`;
-      
-      console.log(`   Final image URL: ${url}`);
       
       setFinalImageUrl(url);
       setImageLoading(true);
       setImageError(false);
     } catch (error) {
-      console.error(`❌ Error processing image for "${resource?.title}":`, error);
+      console.error(`Error processing image for "${resource?.title}":`, error);
       setFinalImageUrl(null);
       setImageLoading(false);
       setImageError(true);
     }
   }, [resource?.image, resource?.title]);
 
-  // FIXED: Improved error handling for image loading
+  // Improved error handling for image loading
   const handleImageLoadError = () => {
-    console.error(`❌ Image failed to load: ${finalImageUrl}`);
-    
-    // Create a direct URL for debugging purposes
-    let debugUrl = '';
-    
-    try {
-      if (resource?.image) {
-        // Get just the filename
-        let filename = resource.image;
-        if (filename.includes('/')) {
-          filename = filename.split('/').pop();
-        }
-        
-        debugUrl = `${SERVER_URL}/uploads/${filename}`;
-        console.log(`🔍 Debug: Try this direct URL in a new tab: ${debugUrl}`);
-      }
-    } catch (err) {
-      console.error('Error creating debug URL:', err);
-    }
+    console.error(`Image failed to load: ${finalImageUrl}`);
     
     // Update state to show placeholder image
     if (isMounted.current) {
@@ -125,7 +105,7 @@ export default function ResourceCard({
 
   // Early return if resource is missing
   if (!resource) {
-    return <div className="border rounded-lg bg-gray-100 p-4">No resource data available</div>;
+    return <div className="border rounded-lg bg-gray-100 dark:bg-gray-700 p-4 text-gray-500 dark:text-gray-400">No resource data available</div>;
   }
 
   // Determine user relationships
@@ -210,65 +190,78 @@ export default function ResourceCard({
   }
 
   return (
-    <div className="border rounded-lg overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow">
+    <div 
+      className="border rounded-lg overflow-hidden bg-white dark:bg-gray-800 shadow-sm hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 h-full flex flex-col relative resource-card"
+      onMouseEnter={() => setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
+    >
       {/* Image Section with enhanced error handling */}
-      <div className="relative h-48 bg-gray-200 overflow-hidden">
+      <div 
+        className="relative h-48 bg-gray-200 dark:bg-gray-700 overflow-hidden cursor-pointer"
+        onClick={() => onViewDetails && onViewDetails(resource)}
+      >
         {finalImageUrl && !imageError ? (
           <>
             {/* Loading spinner */}
             {imageLoading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-70 z-10">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600" />
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800 bg-opacity-70 z-10">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 dark:border-green-400" />
               </div>
             )}
-            {/* FIXED: Modified image with proper loading and error handling */}
+            {/* Image with proper loading and error handling */}
             <img
               src={finalImageUrl}
               alt={resource.title || "Resource"}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
               onLoad={() => {
-                console.log(`✅ Image loaded successfully for: "${resource.title}"`);
                 if (isMounted.current) setImageLoading(false);
               }}
               onError={handleImageLoadError}
-              crossOrigin="anonymous" // FIXED: Add crossOrigin to prevent CORS issues
+              crossOrigin="anonymous"
             />
           </>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full bg-gray-100 text-gray-400">
+          <div className="flex flex-col items-center justify-center h-full bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500">
             <img
               src={PLACEHOLDER_IMAGE}
               alt="Placeholder"
               className="w-full h-full object-cover"
             />
-            {resource.image && (
-              <div className="absolute bottom-0 left-0 right-0 bg-red-100 text-red-700 text-xs p-1 text-center">
-                Cannot load image: {resource.image}
+            {resource.image && imageError && (
+              <div className="absolute bottom-0 left-0 right-0 bg-red-100 dark:bg-red-900/70 text-red-700 dark:text-red-300 text-xs p-1 text-center">
+                Image unavailable
               </div>
             )}
           </div>
         )}
+        
+        {/* View details overlay hint */}
+        <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-300">
+          <span className="bg-white dark:bg-gray-800 text-gray-800 dark:text-white px-3 py-1 rounded-full text-sm font-medium shadow-lg">
+            View Details
+          </span>
+        </div>
       </div>
 
-      {/* Card Body */}
-      <div className="p-4">
+      {/* Card Content - add flex-grow to ensure consistent height */}
+      <div className="p-4 flex flex-col flex-grow dark:text-white">
         {/* Title & Availability */}
         <div className="flex items-start justify-between mb-2">
-          <h3 className="font-semibold text-lg mr-2">
+          <h3 className="font-semibold text-lg mr-2 dark:text-white">
             {resource.title || "Untitled"}
           </h3>
-          <span className={`text-sm px-2 py-1 rounded ${availabilityClasses}`}>
+          <span className={`text-sm px-2 py-1 rounded ${availabilityClasses} dark:bg-opacity-20`}>
             {availabilityLabel}
           </span>
         </div>
 
         {/* Description */}
-        <p className="text-gray-600 text-sm mb-3">
+        <p className="text-gray-600 dark:text-gray-300 text-sm mb-3 line-clamp-2">
           {resource.description || "No description"}
         </p>
 
         {/* Category & Location */}
-        <div className="grid grid-cols-2 gap-2 text-sm text-gray-500 mb-3">
+        <div className="grid grid-cols-2 gap-2 text-sm text-gray-500 dark:text-gray-400 mb-3">
           <p>
             <strong>Category:</strong> {resource.category || "Uncategorized"}
           </p>
@@ -279,7 +272,7 @@ export default function ResourceCard({
 
         {/* Owner & Trust Score */}
         <div className="flex items-center mb-4">
-          <p className="text-sm">
+          <p className="text-sm dark:text-gray-300">
             <strong>Owner:</strong>{" "}
             <span className="font-medium">
               {isOwner ? "You" : resource.ownerId?.name || "Unknown"}
@@ -292,9 +285,9 @@ export default function ResourceCard({
 
         {/* Borrower info */}
         {isOwner && resource.availability === "borrowed" && resource.borrowedBy && (
-          <div className="mb-4 p-2 bg-blue-50 rounded-md flex items-center">
-            <UserIcon className="h-4 w-4 text-blue-500 mr-2" />
-            <p className="text-sm text-blue-700">
+          <div className="mb-4 p-2 bg-blue-50 dark:bg-blue-900/30 rounded-md flex items-center">
+            <UserIcon className="h-4 w-4 text-blue-500 dark:text-blue-400 mr-2" />
+            <p className="text-sm text-blue-700 dark:text-blue-300">
               Borrowed by:{" "}
               <span className="font-medium">
                 {resource.borrowedBy?.name || "Unknown user"}
@@ -303,51 +296,86 @@ export default function ResourceCard({
           </div>
         )}
 
+        {/* Availability Badge */}
+        <div className="flex items-center mb-3">
+          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+            resource.availability === "available" 
+              ? "bg-green-100 text-green-800 border border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700" 
+              : "bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700"
+          }`}>
+            {availabilityLabel}
+          </span>
+          
+          {/* Add a pending indicator if applicable */}
+          {resource.pendingRequest && (
+            <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full border border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700">
+              Request Pending
+            </span>
+          )}
+        </div>
+
         {/* Action Buttons */}
-        <div className="flex space-x-3 mt-4">
+        <div className="flex space-x-3 mt-auto pt-4">
           {isOwner ? (
-            <button
-              onClick={handleDelete}
-              disabled={actionLoading}
-              className="px-4 py-2 rounded text-white text-sm flex-1 flex items-center justify-center bg-red-600 hover:bg-red-500"
-            >
-              <TrashIcon className="h-4 w-4 mr-1" />
-              {actionLoading ? "Processing..." : "Delete Resource"}
-            </button>
+            <div className="flex space-x-2 w-full">
+              <button
+                onClick={() => onEdit && onEdit(resource)}
+                disabled={actionLoading}
+                className="px-4 py-2 rounded text-white text-sm flex-1 flex items-center justify-center bg-blue-600 hover:bg-blue-500 transition-colors shadow-sm disabled:bg-blue-300 disabled:cursor-not-allowed"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                </svg>
+                Edit
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={actionLoading}
+                className="px-4 py-2 rounded text-white text-sm flex-1 flex items-center justify-center bg-red-600 hover:bg-red-500 transition-colors shadow-sm disabled:bg-red-300 disabled:cursor-not-allowed"
+              >
+                <TrashIcon className="h-4 w-4 mr-1" />
+                Delete
+              </button>
+            </div>
           ) : (
             <>
               {resource.availability === "available" ? (
                 <button
                   onClick={handleBorrow}
-                  disabled={actionLoading}
-                  className="px-4 py-2 rounded text-white text-sm flex-1 bg-blue-600 hover:bg-blue-500"
+                  disabled={actionLoading || resource.pendingRequest}
+                  className={`px-4 py-2 rounded text-white text-sm flex-1 flex items-center justify-center shadow-sm transition-colors ${
+                    resource.pendingRequest || actionLoading
+                      ? "bg-gray-400 dark:bg-gray-600 cursor-not-allowed" 
+                      : "bg-[#69C143] hover:bg-[#5aad3a]"
+                  }`}
                 >
-                  {actionLoading ? "Processing..." : "Request to Borrow"}
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6z" />
+                  </svg>
+                  {actionLoading ? "Processing..." : resource.pendingRequest ? "Request Pending" : "Request to Borrow"}
                 </button>
               ) : isBorrower ? (
                 <button
                   onClick={handleReturn}
                   disabled={actionLoading}
-                  className="px-4 py-2 rounded text-white text-sm flex-1 bg-amber-500 hover:bg-amber-600"
+                  className="px-4 py-2 rounded text-white text-sm flex-1 bg-amber-500 hover:bg-amber-600 flex items-center justify-center shadow-sm transition-colors disabled:bg-amber-300 disabled:cursor-not-allowed"
                 >
+                  <ArrowPathIcon className="h-4 w-4 mr-1" />
                   {actionLoading ? "Processing..." : "Return"}
                 </button>
               ) : (
                 <button
                   disabled
-                  className="px-4 py-2 rounded text-white text-sm flex-1 bg-gray-300 cursor-not-allowed"
+                  className="px-4 py-2 rounded text-white text-sm flex-1 bg-gray-300 dark:bg-gray-600 cursor-not-allowed shadow-sm"
                 >
                   Borrowed
                 </button>
               )}
 
               <button
-                onClick={() =>
-                  onOpenChat &&
-                  onOpenChat(resource.ownerId?._id, resource._id, resource.title)
-                }
+                onClick={() => onOpenChat && onOpenChat(resource.ownerId?._id, resource._id, resource.title)}
                 disabled={actionLoading}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm flex-1 flex items-center justify-center"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm flex items-center justify-center shadow-sm transition-colors disabled:bg-blue-300 disabled:cursor-not-allowed"
               >
                 <ChatBubbleLeftIcon className="h-4 w-4 mr-1" />
                 Message
@@ -356,6 +384,18 @@ export default function ResourceCard({
           )}
         </div>
       </div>
+      
+      {/* Tooltip that appears on hover */}
+      {showTooltip && (
+        <div className="absolute top-full left-0 right-0 bg-gray-800 text-white p-3 rounded-b-lg text-sm z-10 shadow-lg">
+          <p className="mb-1"><strong>Owner:</strong> {isOwner ? "You" : resource.ownerId?.name || "Unknown"}</p>
+          <p className="mb-1"><strong>Trust Score:</strong> {trustScore}/5</p>
+          <p className="mb-1"><strong>Location:</strong> {resource.location || "Not specified"}</p>
+          {resource.availability === "borrowed" && resource.borrowedBy && (
+            <p><strong>Borrowed by:</strong> {resource.borrowedBy.name || "Unknown user"}</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -367,4 +407,6 @@ ResourceCard.propTypes = {
   onOpenChat: PropTypes.func,
   onDelete: PropTypes.func,
   onShowReviewModal: PropTypes.func,
+  onViewDetails: PropTypes.func, // Added new prop for viewing details
+  onEdit: PropTypes.func, // Add this new prop type
 };

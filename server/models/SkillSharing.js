@@ -33,6 +33,11 @@ const SkillSharingSchema = new mongoose.Schema(
         createdAt: { type: Date, default: Date.now },
       },
     ],
+    // Add allowMultipleStudents field
+    allowMultipleStudents: { 
+      type: Boolean,
+      default: false
+    },
   },
   { timestamps: true }
 );

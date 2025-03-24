@@ -17,16 +17,25 @@ const SkillRequestSchema = new mongoose.Schema(
       ref: "User", 
       required: true 
     },
-    status: { 
-      type: String, 
-      enum: ["pending", "accepted", "rejected", "completed"], 
-      default: "pending" 
-    },
     message: { 
       type: String, 
       trim: true 
     },
-    // Add these fields to track review status
+    status: { 
+      type: String, 
+      enum: ["pending", "accepted", "rejected", "completed", "canceled"], 
+      default: "pending" 
+    },
+    responseMessage: {
+      type: String,
+      trim: true
+    },
+    statusNote: {
+      type: String,
+      trim: true
+    },
+    respondedAt: Date,
+    completedAt: Date,
     requesterReviewed: {
       type: Boolean,
       default: false

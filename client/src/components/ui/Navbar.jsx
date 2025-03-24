@@ -1,6 +1,6 @@
 // src/components/ui/Navbar.jsx
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import PropTypes from "prop-types";
 import { UserCircleIcon, BellIcon, StarIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "../../context/AuthContext";
@@ -36,9 +36,9 @@ export default function Navbar({ userData }) {
       <div className="w-full px-6 py-3 flex justify-between items-center">
         
         {/* Left: Community Connect logo */}
-        <div className="text-2xl font-bold italic text-[#69C143]">
+        <Link to="/" className="text-2xl font-bold italic text-[#69C143] hover:opacity-90 transition-opacity">
           Community Connect
-        </div>
+        </Link>
 
         {/* Right: Notification Bell + User Dropdown */}
         <div className="flex items-center space-x-6">

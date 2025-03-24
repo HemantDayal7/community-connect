@@ -3,6 +3,8 @@ import Notification from "../../models/Notification.js";
 import Transaction from "../../models/Transaction.js"; // Make sure this is imported
 import { validationResult } from "express-validator";
 import mongoose from "mongoose";
+import path from "path";
+import fs from "fs";
 
 /**
  * @desc Create a new resource
@@ -125,138 +127,124 @@ export const getResourceById = async (req, res) => {
  * @route PUT /api/v1/resources/:id
  * @access Private
  */
-export const updateResource = async (req, res) => {
+export const updateResourceAvailability = async (req, res) => {
   try {
-    const resourceId = req.params.id;
-    const userId = req.user._id;
+    const { id } = req.params;
     const { action } = req.body; // 'borrow' or 'return'
-
-    // Find the resource
-    const resource = await Resource.findById(resourceId);
+    const userId = req.user._id;
+    
+    const resource = await Resource.findById(id);
     if (!resource) {
-      return res.status(404).json({ message: "Resource not found" });
+      return res.status(404).json({ error: "Resource not found" });
     }
-
-    // BORROW FLOW
-    if (action === 'borrow' && resource.availability === "available") {
+    
+    if (action === "borrow") {
+      // Check if the resource is available
+      if (resource.availability !== "available") {
+        return res.status(400).json({ error: "Resource is not available" });
+      }
+      
       // Check if user is trying to borrow their own resource
       if (resource.ownerId.toString() === userId.toString()) {
-        return res.status(400).json({ message: "You cannot borrow your own resource" });
+        return res.status(400).json({ error: "You cannot borrow your own resource" });
       }
-
+      
       // Update resource status
       resource.availability = "borrowed";
       resource.borrowedBy = userId;
       
-      try {
-        // Create a transaction record
-        const transaction = new Transaction({
-          resourceId: resource._id,
-          ownerId: resource.ownerId,
-          borrowerId: userId,
-          status: "ongoing",
-          borrowedAt: new Date()
-        });
-        
-        await transaction.save();
-        
-        // Create notification for resource owner
-        const notification = new Notification({
-          userId: resource.ownerId,
-          message: `${req.user.name} has borrowed your resource: ${resource.title}`,
-          type: "resource_borrowed", 
-          resourceId: resource._id,
-          createdAt: new Date()
-        });
-        await notification.save();
-        
-        // FIXED: Log notification delivery for debugging
-        if (req.app.get('io')) {
-          const io = req.app.get('io');
-          console.log(`📣 Sending notification to user ${resource.ownerId}`);
-          io.to(resource.ownerId.toString()).emit("notification", {
-            _id: notification._id,
-            message: notification.message,
-            type: notification.type,
-            resourceId: notification.resourceId,
-            createdAt: notification.createdAt
-          });
-        } else {
-          console.log("❌ No IO instance available for notification");
-        }
-      } catch (err) {
-        console.error("Error creating transaction/notification:", err);
+      // Create transaction record
+      const transaction = new Transaction({
+        resourceId: resource._id,
+        ownerId: resource.ownerId,
+        borrowerId: userId,
+        status: "borrowed",
+        borrowedAt: new Date()
+      });
+      
+      await transaction.save();
+      
+      // Create notification for resource owner
+      const notification = new Notification({
+        userId: resource.ownerId,
+        message: `${req.user.name} has borrowed your ${resource.title}`,
+        type: "resource_borrowed",
+        resourceId: resource._id,
+        actionBy: userId
+      });
+      
+      await notification.save();
+      
+      // Send real-time notification
+      const io = req.app.get("io");
+      io.to(resource.ownerId.toString()).emit("notification", notification);
+      
+    } else if (action === "return") {
+      // Check if the resource is borrowed
+      if (resource.availability !== "borrowed") {
+        return res.status(400).json({ error: "Resource is not borrowed" });
       }
-    } 
-    // RETURN FLOW
-    else if (action === 'return' && resource.availability === "borrowed") {
-      // Check if user is the borrower
+      
+      // Check if the current user is the borrower
       if (!resource.borrowedBy || resource.borrowedBy.toString() !== userId.toString()) {
-        return res.status(400).json({ 
-          message: "Only the borrower can return this resource" 
-        });
+        return res.status(403).json({ error: "You can only return resources you've borrowed" });
       }
       
       // Update resource status
       resource.availability = "available";
       
-      try {
-        // Update transaction
-        const transaction = await Transaction.findOne({
-          resourceId: resource._id,
-          borrowerId: userId,
-          status: "ongoing"
-        });
-        
-        if (transaction) {
-          transaction.status = "returned";
-          transaction.returnedAt = new Date();
-          await transaction.save();
-        }
-        
-        // Create notification for resource owner
-        const notification = new Notification({
-          userId: resource.ownerId,
-          message: `${req.user.name} has returned your resource: ${resource.title}`,
-          type: "resource",
-          resourceId: resource._id,
-        });
-        await notification.save();
-        
-        // Send real-time notification via socket.io
-        if (req.app.get('io')) {
-          const io = req.app.get('io');
-          io.to(resource.ownerId.toString()).emit("notification", {
-            _id: notification._id,
-            message: notification.message,
-            type: notification.type,
-            resourceId: notification.resourceId,
-            createdAt: notification.createdAt,
-          });
-        }
-      } catch (err) {
-        console.error("Error updating transaction/notification:", err);
-        // Continue with resource update even if notification fails
+      // Update transaction
+      const transaction = await Transaction.findOne({
+        resourceId: resource._id,
+        borrowerId: userId,
+        status: "borrowed"
+      });
+      
+      if (transaction) {
+        transaction.status = "returned";
+        transaction.returnedAt = new Date();
+        await transaction.save();
       }
       
+      // Create notification for resource owner
+      const notification = new Notification({
+        userId: resource.ownerId,
+        message: `${req.user.name} has returned your ${resource.title}`,
+        type: "resource_returned",
+        resourceId: resource._id,
+        actionBy: userId
+      });
+      
+      await notification.save();
+      
+      // Send real-time notification
+      const io = req.app.get("io");
+      io.to(resource.ownerId.toString()).emit("notification", notification);
+      
+      // Clear borrower
       resource.borrowedBy = null;
     } else {
-      return res.status(400).json({ 
-        message: "Invalid action or resource state" 
-      });
+      return res.status(400).json({ error: "Invalid action" });
     }
-
+    
     await resource.save();
+    
+    // Return updated resource with populated fields
+    const updatedResource = await Resource.findById(id)
+      .populate("ownerId", "name avatar trustScore")
+      .populate("borrowedBy", "name avatar trustScore");
 
-    // Populate the updated resource for response
-    const updatedResource = await Resource.findById(resourceId)
-      .populate("ownerId", "name trustScore")
-      .populate("borrowedBy", "name trustScore");
-
-    res.status(200).json(updatedResource);
+    // Emit event for resource update
+    const io = req.app.get("io");
+    if (io) {
+      io.emit("resource-updated", updatedResource);
+      console.log("📢 Emitted resource-updated event");
+    }
+    
+    res.json(updatedResource);
   } catch (error) {
-    console.error(`🔥 Error updating resource: ${error}`);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("Error updating resource:", error);
+    res.status(500).json({ error: "Server error" });
   }
 };
 
@@ -407,124 +395,60 @@ export const updateResourceStatus = async (req, res) => {
 
 // Enhanced borrow/return process with improved notifications
 
-export const updateResourceAvailability = async (req, res) => {
+export const updateResource = async (req, res) => {
   try {
     const { id } = req.params;
-    const { action } = req.body; // 'borrow' or 'return'
-    const userId = req.user._id;
     
+    // Verify ownership
     const resource = await Resource.findById(id);
     if (!resource) {
-      return res.status(404).json({ error: "Resource not found" });
+      return res.status(404).json({ message: "Resource not found" });
     }
     
-    if (action === "borrow") {
-      // Check if the resource is available
-      if (resource.availability !== "available") {
-        return res.status(400).json({ error: "Resource is not available" });
-      }
-      
-      // Check if user is trying to borrow their own resource
-      if (resource.ownerId.toString() === userId.toString()) {
-        return res.status(400).json({ error: "You cannot borrow your own resource" });
-      }
-      
-      // Update resource status
-      resource.availability = "borrowed";
-      resource.borrowedBy = userId;
-      
-      // Create transaction record
-      const transaction = new Transaction({
-        resourceId: resource._id,
-        ownerId: resource.ownerId,
-        borrowerId: userId,
-        status: "borrowed",
-        borrowedAt: new Date()
-      });
-      
-      await transaction.save();
-      
-      // Create notification for resource owner
-      const notification = new Notification({
-        userId: resource.ownerId,
-        message: `${req.user.name} has borrowed your ${resource.title}`,
-        type: "resource_borrowed",
-        resourceId: resource._id,
-        actionBy: userId
-      });
-      
-      await notification.save();
-      
-      // Send real-time notification
-      const io = req.app.get("io");
-      io.to(resource.ownerId.toString()).emit("notification", notification);
-      
-    } else if (action === "return") {
-      // Check if the resource is borrowed
-      if (resource.availability !== "borrowed") {
-        return res.status(400).json({ error: "Resource is not borrowed" });
-      }
-      
-      // Check if the current user is the borrower
-      if (!resource.borrowedBy || resource.borrowedBy.toString() !== userId.toString()) {
-        return res.status(403).json({ error: "You can only return resources you've borrowed" });
-      }
-      
-      // Update resource status
-      resource.availability = "available";
-      
-      // Update transaction
-      const transaction = await Transaction.findOne({
-        resourceId: resource._id,
-        borrowerId: userId,
-        status: "borrowed"
-      });
-      
-      if (transaction) {
-        transaction.status = "returned";
-        transaction.returnedAt = new Date();
-        await transaction.save();
-      }
-      
-      // Create notification for resource owner
-      const notification = new Notification({
-        userId: resource.ownerId,
-        message: `${req.user.name} has returned your ${resource.title}`,
-        type: "resource_returned",
-        resourceId: resource._id,
-        actionBy: userId
-      });
-      
-      await notification.save();
-      
-      // Send real-time notification
-      const io = req.app.get("io");
-      io.to(resource.ownerId.toString()).emit("notification", notification);
-      
-      // Clear borrower
-      resource.borrowedBy = null;
-    } else {
-      return res.status(400).json({ error: "Invalid action" });
+    if (resource.ownerId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "You can only update your own resources" });
     }
     
-    await resource.save();
+    // Update fields
+    resource.title = req.body.title;
+    resource.description = req.body.description;
+    resource.category = req.body.category;
+    resource.location = req.body.location;
     
-    // Return updated resource with populated fields
-    const updatedResource = await Resource.findById(id)
-      .populate("ownerId", "name avatar trustScore")
-      .populate("borrowedBy", "name avatar trustScore");
-
-    // Emit event for resource update
-    const io = req.app.get("io");
-    if (io) {
-      io.emit("resource-updated", updatedResource);
-      console.log("📢 Emitted resource-updated event");
+    // Handle image update
+    if (req.file) {
+      // Delete old image if it exists
+      if (resource.image && !resource.image.startsWith('http')) {
+        const imagePath = path.join(__dirname, '../uploads/', resource.image);
+        if (fs.existsSync(imagePath)) {
+          fs.unlinkSync(imagePath);
+        }
+      }
+      resource.image = req.file.filename;
+    } else if (req.body.keepExistingImage === 'false') {
+      // If user removed the image and didn't upload a new one
+      if (resource.image && !resource.image.startsWith('http')) {
+        const imagePath = path.join(__dirname, '../uploads/', resource.image);
+        if (fs.existsSync(imagePath)) {
+          fs.unlinkSync(imagePath);
+        }
+      }
+      resource.image = null;
+    }
+    // If keepExistingImage is true, we don't modify the image field
+    
+    const updatedResource = await resource.save();
+    
+    // Populate owner details for the response
+    await updatedResource.populate('ownerId', 'name trustScore');
+    if (updatedResource.borrowedBy) {
+      await updatedResource.populate('borrowedBy', 'name');
     }
     
-    res.json(updatedResource);
+    res.status(200).json(updatedResource);
   } catch (error) {
-    console.error("Error updating resource:", error);
-    res.status(500).json({ error: "Server error" });
+    console.error('Error updating resource:', error);
+    res.status(500).json({ message: "Error updating resource", error: error.message });
   }
 };
 
