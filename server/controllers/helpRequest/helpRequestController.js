@@ -244,7 +244,7 @@ export const offerHelp = async (req, res) => {
     
     // Create a notification for the requester
     const notification = new Notification({
-      userId: helpRequest.requesterId,
+      userId: helpRequest.requesterId, // Correct field name
       message: `${req.user.name} has offered to help with your request: "${helpRequest.title}"`,
       type: "help_offered",
       isRead: false

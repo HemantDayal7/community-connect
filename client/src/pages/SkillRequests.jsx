@@ -204,8 +204,7 @@ useEffect(() => {
   };
   
   // Handle review submission
-  const handleSubmitReview = async (e) => {
-    e.preventDefault();
+  const handleSubmitReview = async (isProvider) => {
     if (submittingReview || !currentRequest) return;
     
     setSubmittingReview(true);
@@ -213,7 +212,8 @@ useEffect(() => {
       const response = await API.post("/skillreviews", {
         requestId: currentRequest._id,
         rating: reviewData.rating,
-        comment: reviewData.comment
+        comment: reviewData.comment,
+        isProvider: isProvider  // This is the crucial parameter being added
       });
       
       console.log("Review submission successful:", response.data);

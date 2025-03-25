@@ -1,21 +1,16 @@
 import { useState, useEffect, useContext } from "react";
-// import MainLayout from "../components/layout/MainLayout";
+import { useNavigate } from "react-router-dom"; // Add this import
 import { AuthContext } from "../context/AuthContext";
 import API from "../services/api";
 import { toast } from "react-toastify";
 import {
   PlusIcon,
-  PencilIcon,
-  TrashIcon,
-  ArrowPathIcon,
-  MapPinIcon,
-  CalendarIcon,
   MagnifyingGlassIcon,
-  XCircleIcon,
-  ChevronDownIcon,
-  UserGroupIcon,
+  ChevronDownIcon
 } from "@heroicons/react/24/outline";
 import Spinner from "../components/ui/Spinner";
+import EventCard from '../components/events/EventCard';
+import EventDetailsModal from '../components/events/EventDetailsModal';
 
 // Event categories
 const EVENT_CATEGORIES = [
@@ -42,6 +37,7 @@ const isUserAttending = (event, userId) => {
 };
 
 export default function Events() {
+  const navigate = useNavigate(); // Add the hook
   const { userData } = useContext(AuthContext);
   
   // States
@@ -157,6 +153,11 @@ export default function Events() {
       await API.delete(`/events/${eventId}`);
       toast.success("Event deleted successfully!");
       setEvents((prev) => prev.filter((event) => event._id !== eventId));
+      
+      // Close modal if open
+      if (selectedEvent && selectedEvent._id === eventId) {
+        setShowEventModal(false);
+      }
     } catch (err) {
       console.error("Error deleting event:", err);
       toast.error(err.response?.data?.message || "Failed to delete event.");
@@ -217,6 +218,12 @@ export default function Events() {
     setSelectedEvent(event);
     setShowEventModal(true);
   };
+  
+  // Handle messaging
+  const handleMessage = (userId) => {
+    navigate(`/messages?with=${userId}`);
+    setShowEventModal(false);
+  };
 
   // Filter events based on search and category
   const filteredEvents = events.filter((event) => {
@@ -241,16 +248,16 @@ export default function Events() {
 
   return (
     <div>
-    {/* Use EXACTLY the same container as Resources page */}
-    <div className="p-6 bg-white shadow-md rounded-lg">
-      <h1 className="text-2xl font-bold mb-4">Community Events</h1>
-      
-      {error && (
-        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-          {error}
-        </div>
-      )}
+      <div className="container mx-auto px-4 py-6">
+        <div className="bg-white shadow-md rounded-lg p-6">
+          <h1 className="text-2xl font-bold mb-4">Community Events</h1>
           
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+              {error}
+            </div>
+          )}
+              
           {/* Search and Filter Bar */}
           <div className="mb-6 bg-gray-50 p-4 rounded-lg">
             <div className="flex flex-col md:flex-row gap-4">
@@ -308,7 +315,7 @@ export default function Events() {
               <div className="flex space-x-2 md:ml-auto">
                 <button
                   onClick={() => setShowAddForm(!showAddForm)}
-                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded flex items-center"
+                  className="bg-[#69C143] hover:bg-[#5aad3a] text-white px-4 py-2 rounded flex items-center"
                 >
                   <PlusIcon className="h-5 w-5 mr-1" />
                   {showAddForm ? "Cancel" : "Create Event"}
@@ -417,7 +424,7 @@ export default function Events() {
                   </button>
                   <button
                     type="submit"
-                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+                    className="bg-[#69C143] hover:bg-[#5aad3a] text-white px-4 py-2 rounded"
                   >
                     {showEditForm ? "Update Event" : "Create Event"}
                   </button>
@@ -448,69 +455,17 @@ export default function Events() {
                   </div>
                   <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                     {userEvents.map(event => (
-                      <div
+                      <EventCard
                         key={event._id}
-                        onClick={() => openEventDetails(event)}
-                        className="bg-white rounded shadow-md overflow-hidden hover:shadow-lg transition-shadow cursor-pointer border border-gray-100"
-                      >
-                        <div className="p-4">
-                          <div className="flex justify-between items-start">
-                            <h3 className="text-lg font-semibold truncate mb-1">
-                              {event.title}
-                            </h3>
-                            <span className="inline-block bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">
-                              You are hosting
-                            </span>
-                          </div>
-                          
-                          <p className="text-gray-600 text-sm line-clamp-2 my-2">
-                            {event.description}
-                          </p>
-                          
-                          <span className="inline-block bg-gray-100 text-xs text-gray-600 rounded px-2 py-1">
-                            {event.category || "Other"}
-                          </span>
-                          
-                          <div className="flex items-center text-xs text-gray-500 mt-2">
-                            <CalendarIcon className="w-3 h-3 mr-1" />
-                            {new Date(event.date).toLocaleString()}
-                          </div>
-                          
-                          <div className="flex items-center text-xs text-gray-500 mt-1">
-                            <MapPinIcon className="w-3 h-3 mr-1" />
-                            {event.location}
-                          </div>
-                          
-                          <div className="flex items-center text-xs text-gray-500 mt-1">
-                            <UserGroupIcon className="w-3 h-3 mr-1" />
-                            {event.attendees?.length || 0} attending
-                          </div>
-                          
-                          {/* Edit/Delete buttons */}
-                          <div className="flex justify-end mt-3 space-x-1" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              className="text-blue-500 hover:bg-blue-100 p-1 rounded"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                handleEdit(event);
-                              }}
-                              title="Edit event"
-                            >
-                              <PencilIcon className="h-4 w-4" />
-                            </button>
-                            <button
-                              className="text-red-500 hover:bg-red-100 p-1 rounded"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                handleDelete(event._id);
-                              }}
-                              title="Delete event"
-                            >
-                              <TrashIcon className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
+                        event={event}
+                        userData={userData}
+                        onRSVP={handleRSVP}
+                        onCancelRSVP={handleCancelRSVP}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                        onViewDetails={openEventDetails}
+                        onOpenChat={handleMessage}
+                      />
                     ))}
                   </div>
                 </div>
@@ -526,56 +481,17 @@ export default function Events() {
                 </div>
                 <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                   {communityEvents.map(event => (
-                    <div
+                    <EventCard
                       key={event._id}
-                      onClick={() => openEventDetails(event)}
-                      className="bg-white rounded shadow-md overflow-hidden hover:shadow-lg transition-shadow cursor-pointer border border-gray-100"
-                    >
-                      <div className="p-4">
-                        <div className="flex justify-between items-start">
-                          <h3 className="text-lg font-semibold truncate mb-1">
-                            {event.title}
-                          </h3>
-                          <span className="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
-                            Upcoming
-                          </span>
-                        </div>
-                        
-                        <p className="text-gray-600 text-sm line-clamp-2 my-2">
-                          {event.description}
-                        </p>
-                        
-                        <span className="inline-block bg-gray-100 text-xs text-gray-600 rounded px-2 py-1">
-                          {event.category || "Other"}
-                        </span>
-                        
-                        <div className="flex items-center text-xs text-gray-500 mt-2">
-                          <CalendarIcon className="w-3 h-3 mr-1" />
-                          {new Date(event.date).toLocaleString()}
-                        </div>
-                        
-                        <div className="flex items-center text-xs text-gray-500 mt-1">
-                          <MapPinIcon className="w-3 h-3 mr-1" />
-                          {event.location}
-                        </div>
-                        
-                        <div className="flex items-center text-xs text-gray-500 mt-1">
-                          <UserGroupIcon className="w-3 h-3 mr-1" />
-                          {event.attendees?.length || 0} attending
-                        </div>
-                        
-                        <div className="flex items-center mt-3">
-                          <div className="flex-shrink-0">
-                            <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-xs">
-                              {event.hostId?.name?.[0] || "?"}
-                            </div>
-                          </div>
-                          <div className="ml-2">
-                            <p className="text-xs font-medium">{event.hostId?.name || "Unknown"}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                      event={event}
+                      userData={userData}
+                      onRSVP={handleRSVP}
+                      onCancelRSVP={handleCancelRSVP}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                      onViewDetails={openEventDetails}
+                      onOpenChat={handleMessage}
+                    />
                   ))}
                 </div>
               </div>
@@ -591,56 +507,17 @@ export default function Events() {
                   </div>
                   <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                     {pastEvents.map(event => (
-                      <div
+                      <EventCard
                         key={event._id}
-                        onClick={() => openEventDetails(event)}
-                        className="bg-white rounded shadow-md overflow-hidden hover:shadow-lg transition-shadow cursor-pointer border border-gray-100 opacity-75"
-                      >
-                        <div className="p-4">
-                          <div className="flex justify-between items-start">
-                            <h3 className="text-lg font-semibold truncate mb-1">
-                              {event.title}
-                            </h3>
-                            <span className="inline-block bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded">
-                              Past
-                            </span>
-                          </div>
-                          
-                          <p className="text-gray-600 text-sm line-clamp-2 my-2">
-                            {event.description}
-                          </p>
-                          
-                          <span className="inline-block bg-gray-100 text-xs text-gray-600 rounded px-2 py-1">
-                            {event.category || "Other"}
-                          </span>
-                          
-                          <div className="flex items-center text-xs text-gray-500 mt-2">
-                            <CalendarIcon className="w-3 h-3 mr-1" />
-                            {new Date(event.date).toLocaleString()}
-                          </div>
-                          
-                          <div className="flex items-center text-xs text-gray-500 mt-1">
-                            <MapPinIcon className="w-3 h-3 mr-1" />
-                            {event.location}
-                          </div>
-                          
-                          <div className="flex items-center text-xs text-gray-500 mt-1">
-                            <UserGroupIcon className="w-3 h-3 mr-1" />
-                            {event.attendees?.length || 0} attended
-                          </div>
-                          
-                          <div className="flex items-center mt-3">
-                            <div className="flex-shrink-0">
-                              <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-xs">
-                                {event.hostId?.name?.[0] || "?"}
-                              </div>
-                            </div>
-                            <div className="ml-2">
-                              <p className="text-xs font-medium">{event.hostId?.name || "Unknown"}</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                        event={event}
+                        userData={userData}
+                        onRSVP={handleRSVP}
+                        onCancelRSVP={handleCancelRSVP}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                        onViewDetails={openEventDetails}
+                        onOpenChat={handleMessage}
+                      />
                     ))}
                   </div>
                 </div>
@@ -650,120 +527,21 @@ export default function Events() {
 
           {/* Event Details Modal */}
           {showEventModal && selectedEvent && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <h2 className="text-xl font-bold">{selectedEvent.title}</h2>
-                    <button 
-                      onClick={() => setShowEventModal(false)}
-                      className="text-gray-400 hover:text-gray-600"
-                    >
-                      <XCircleIcon className="h-6 w-6" />
-                    </button>
-                  </div>
-                  
-                  <div className="mb-4">
-                    <span className={`inline-block text-sm px-3 py-1 rounded-full mb-4 ${
-                      new Date(selectedEvent.date) >= new Date() 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {new Date(selectedEvent.date) >= new Date() ? 'Upcoming' : 'Past Event'}
-                    </span>
-                    
-                    <p className="text-gray-700 mb-4">{selectedEvent.description}</p>
-                    
-                    <div className="flex items-center text-sm text-gray-600 mb-2">
-                      <CalendarIcon className="h-4 w-4 mr-2" />
-                      {new Date(selectedEvent.date).toLocaleString()}
-                    </div>
-                    
-                    <div className="flex items-center text-sm text-gray-600 mb-4">
-                      <MapPinIcon className="h-4 w-4 mr-2" />
-                      {selectedEvent.location}
-                    </div>
-                    
-                    <div className="flex items-center text-sm text-gray-600 mb-4">
-                      <UserGroupIcon className="h-4 w-4 mr-2" />
-                      {selectedEvent.attendees?.length || 0} people attending
-                    </div>
-                    
-                    {/* Category */}
-                    <div className="mb-4">
-                      <span className="text-sm font-medium">Category: </span>
-                      <span className="inline-block bg-gray-100 text-xs text-gray-600 rounded px-2 py-1">
-                        {selectedEvent.category || "Other"}
-                      </span>
-                    </div>
-                    
-                    {/* Host */}
-                    <div className="border-t pt-4 mb-6">
-                      <h3 className="font-medium mb-2">Hosted by</h3>
-                      <div className="flex items-center">
-                        <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center mr-2">
-                          {selectedEvent.hostId?.name?.[0] || "?"}
-                        </div>
-                        <span className="font-medium">{selectedEvent.hostId?.name || "Unknown"}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex justify-between border-t pt-4 mt-4">
-                      <button
-                        onClick={() => setShowEventModal(false)}
-                        className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded mr-2"
-                      >
-                        Close
-                      </button>
-                      
-                      {/* RSVP button */}
-                      {userData && 
-                      userData._id !== selectedEvent.hostId?._id &&
-                      new Date(selectedEvent.date) >= new Date() &&
-                      !isUserAttending(selectedEvent, userData._id) && (
-                        <button
-                          onClick={() => handleRSVP(selectedEvent._id)}
-                          disabled={rsvpLoading}
-                          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded flex items-center"
-                        >
-                          {rsvpLoading ? (
-                            <span className="flex items-center">
-                              <ArrowPathIcon className="h-5 w-5 mr-1 animate-spin" />
-                              Processing...
-                            </span>
-                          ) : (
-                            "RSVP"
-                          )}
-                        </button>
-                      )}
-                      
-                      {/* Cancel RSVP button */}
-                      {userData && 
-                      userData._id !== selectedEvent.hostId?._id &&
-                      new Date(selectedEvent.date) >= new Date() &&
-                      isUserAttending(selectedEvent, userData._id) && (
-                        <button
-                          onClick={() => handleCancelRSVP(selectedEvent._id)}
-                          disabled={rsvpLoading}
-                          className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded flex items-center"
-                        >
-                          {rsvpLoading ? (
-                            <span className="flex items-center">
-                              <ArrowPathIcon className="h-5 w-5 mr-1 animate-spin" />
-                              Processing...
-                            </span>
-                          ) : (
-                            "Cancel RSVP"
-                          )}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <EventDetailsModal
+              event={selectedEvent}
+              isHost={userData && userData._id === selectedEvent.hostId?._id}
+              isAttending={isUserAttending(selectedEvent, userData?._id)}
+              onClose={() => setShowEventModal(false)}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onRSVP={handleRSVP}
+              onCancelRSVP={handleCancelRSVP}
+              onMessage={handleMessage}
+              rsvpLoading={rsvpLoading}
+            />
           )}
         </div>
       </div>
+    </div>
   );
 }
